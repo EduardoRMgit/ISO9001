@@ -1,0 +1,17 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="DigitalDoor.Reporting.Extensions" Version="1.16.60" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ISO9001.GenerateAuditReport.Core\ISO9001.GenerateAuditReport.Core.csproj" />
+  </ItemGroup>
+
+</Project>

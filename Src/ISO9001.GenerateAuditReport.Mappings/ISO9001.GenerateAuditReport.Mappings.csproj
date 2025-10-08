@@ -1,0 +1,17 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ISO9001.GenerateAuditReport.BusinessObjects\ISO9001.GenerateAuditReport.BusinessObjects.csproj" />
+    <ProjectReference Include="..\ISO9001.Helpers\ISO9001.Helpers.csproj" />
+  </ItemGroup>
+
+</Project>

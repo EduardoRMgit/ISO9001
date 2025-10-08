@@ -1,0 +1,17 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="DigitalDoor.Reporting.Entities" Version="1.16.59" />
+    <PackageReference Include="DigitalDoor.Reporting.Presenters.PDF" Version="1.16.60" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ISO9001.Entities\ISO9001.Entities.csproj" />
+  </ItemGroup>
+
+</Project>

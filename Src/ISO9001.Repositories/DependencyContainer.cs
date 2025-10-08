@@ -1,4 +1,5 @@
-﻿using ISO9001.GetAllAuditLogs.BusinessObjects.Interfaces;
+﻿using ISO9001.GenerateAuditReport.BusinessObjects.Interfaces;
+using ISO9001.GetAllAuditLogs.BusinessObjects.Interfaces;
 using ISO9001.GetAllCustomerFeedback.BusinessObjects.Interfaces;
 using ISO9001.GetAllIncidentReports.BusinessObjects.Interfaces;
 using ISO9001.GetAllNonConformities.BusinessObjects;
@@ -22,6 +23,7 @@ using ISO9001.RegisterNonConformity.BusinessObjects.Interfaces;
 using ISO9001.RegisterNonConformityDetail.BusinessObjects.Interfaces;
 using ISO9001.Repositories.AuditLogRepositories;
 using ISO9001.Repositories.AuditLogRepositories.AuditEventProvider;
+using ISO9001.Repositories.AuditReport;
 using ISO9001.Repositories.CustomerFeedbackRepositories;
 using ISO9001.Repositories.CustomerFeedbackRepositories.AuditEventProvider;
 using ISO9001.Repositories.DashBoardRepositories;
@@ -66,6 +68,7 @@ namespace ISO9001.Repositories
             services.AddScoped<IGetNonConformityByStatusRepository, GetNonConformityByStatusRepository>();
 
             services.AddScoped<IGetQualityDashBoardRepository, GetQualityDashBoardRepository>();
+            services.AddScoped<IGenerateAuditReportRepository, GenerateAuditReportRepository>();
 
             services.AddScoped<IAuditEventProvider, AuditLogEventProvider>();
             services.AddScoped<IAuditEventProvider, CustomerFeedbackEventProvider>();

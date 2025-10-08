@@ -1,5 +1,6 @@
 ﻿using ISO9001.AuditEvents.Repositories;
 using ISO9001.Database.InMemory;
+using ISO9001.GenerateAuditReport.IoC;
 using ISO9001.GetAllAuditLogs.IoC;
 using ISO9001.GetAllCustomerFeedback.IoC;
 using ISO9001.GetAllIncidentReports.IoC;
@@ -58,6 +59,7 @@ namespace ISO9001.WebAPI
             builder.Services.AddAuditEventsRepositories();
 
             builder.Services.AddGetQualityDashBoardServices();
+            builder.Services.AddGenerateAuditReportServices();
 
             builder.Services.AddISO9001Repositories();
             builder.Services.AddDatabaseInMemory();

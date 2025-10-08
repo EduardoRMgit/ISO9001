@@ -7,6 +7,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\ISO9001.Entities\ISO9001.Entities.csproj" />
+    <ProjectReference Include="..\ISO9001.GenerateAuditReport.BusinessObjects\ISO9001.GenerateAuditReport.BusinessObjects.csproj" />
     <ProjectReference Include="..\ISO9001.GetAllAuditLogs.BusinessObjects\ISO9001.GetAllAuditLogs.BusinessObjects.csproj" />
     <ProjectReference Include="..\ISO9001.GetAllCustomerFeedback.BusinessObjects\ISO9001.GetAllCustomerFeedback.BusinessObjects.csproj" />
     <ProjectReference Include="..\ISO9001.GetAllIncidentReports.BusinessObjects\ISO9001.GetAllIncidentReports.BusinessObjects.csproj" />

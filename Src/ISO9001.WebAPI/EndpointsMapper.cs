@@ -1,4 +1,5 @@
-﻿using ISO9001.GetAllAuditLogs.Rest.Mappings;
+﻿using ISO9001.GenerateAuditReport.Mappings;
+using ISO9001.GetAllAuditLogs.Rest.Mappings;
 using ISO9001.GetAllCustomerFeedback.Rest.Mappings;
 using ISO9001.GetAllIncidentReports.Rest.Mappings;
 using ISO9001.GetAllNonConformities.Rest.Mappings;
@@ -54,6 +55,7 @@ namespace ISO9001.WebAPI
 
             builder.MapGetAuditEventsEndpoint();
             builder.MapGetQualityDashBoard();
+            builder.MapGenerateAuditReportEndpoint();
 
             return builder;
         }
