@@ -10,8 +10,7 @@ namespace ISO9001.GenerateAuditReport.Core
         public static IServiceCollection AddGenerateAuditReportCoreServices(this IServiceCollection services)
         {
             services.AddScoped<IGenerateAuditReportController, GenerateAuditReportController>();
-            //services.AddScoped<IGenerateAuditReportInputPort, GenerateAuditReportInputPort>();
-            services.AddScoped<IGenerateAuditReportInputPort, GenerateAuditJsonReportTemplateInputPort>();
+            services.AddScoped<IGenerateAuditReportInputPort, GenerateAuditReportInputPort>();
 
             services.AddReportingPresenterPdfServices();
             return services;

@@ -4,7 +4,6 @@ using DigitalDoor.Reporting.Entities.Models;
 using DigitalDoor.Reporting.Entities.ValueObjects;
 using DigitalDoor.Reporting.Entities.ViewModels;
 using ISO9001.GenerateAuditReport.BusinessObjects.Interfaces;
-using Org.BouncyCastle.Asn1.X509;
 
 namespace ISO9001.GenerateAuditReport.Core.Handlers
 {
@@ -26,848 +25,600 @@ namespace ISO9001.GenerateAuditReport.Core.Handlers
             var CustomerFeedbackResponses = await repository.GetAllCustomerFeedbacksOrderByReportedAt(companyId, entityId, UtcFrom, UtcEnd);
 
 
-            Setup reportSetUp = new(PageSize.A4, Orientation.Portrait);
+            Setup reportSetUp = new()
+            {
+                Page = new Format() { Orientation = Orientation.Portrait, Dimension = PageSize.A4, Background = "white",
+                    Padding = new(0, 0, 0, 0), Margin = new(0, 0, 0, 0), Position = new(0, 0, 0, 0) },
+                Header = new Section(new Format(PageSize.A4.Width, 40) ),
+                Body = new Section(new Format(PageSize.A4.Width, 237) ) { Row  = new Row(new Dimension(PageSize.A4.Width, 9))},
+                Footer = new Section(new Format(PageSize.A4.Width, 20))
+            };
 
-            #region Header
-            reportSetUp.Header = new Section(new Format(210, 40));
-
+            // === HEADER ===
             reportSetUp.Header.AddColumn(new ColumnSetup
             {
                 Format = new Format(210, 20)
                 {
-                    Position = new(20, 0),
+                    Position = new(15, 0),
                     FontDetails = new Font("Arial", new Shade(25, "Black"), new FontStyle(700)),
                     TextAlignment = TextAlignment.Center
                 },
                 DataColumn = new Item("HeaderText")
             });
-
             reportSetUp.Header.AddColumn(new ColumnSetup
             {
                 Format = new Format(210, 20)
                 {
-                    Position = new(40, 20),
+                    Position = new(35, 20),
                     FontDetails = new Font("Arial", new Shade(14, "Black")),
                     TextAlignment = TextAlignment.Left
                 },
                 DataColumn = new Item("HeaderSubText")
             });
-            #endregion
-
-            #region BodyCreation
-            reportSetUp.Body = new Section();
-            reportSetUp.Body.Format = new Format
-            {
-                Dimension = new Dimension(210, 197),
-                Position = new(0, 0),
-            };
-            #endregion
-
-            int OffSetY = 0;
 
             #region CustomerFeedbacks
-            reportSetUp.Body.Row = new Row { Dimension = new Dimension(200, 10) };
+
             reportSetUp.Body.AddColumn(new ColumnSetup
             {
-                Format = new Format(200, 8)
+                Format = new Format(210, 9)
                 {
-                    Position = new(OffSetY, 20),
                     FontDetails = new Font("Arial", new Shade(20, "Black"), new FontStyle(700)),
                     TextAlignment = TextAlignment.Left,
+                    Padding = new(0, 0, 0, 20)
 
                 },
                 DataColumn = new Item("FeedbackTitle"),
             });
 
-            OffSetY += 15;
-
-            reportSetUp.Body.Row = new Row { Dimension = new Dimension(210, 9), };
-
-            if (CustomerFeedbackResponses == null || !CustomerFeedbackResponses.Any())
+            reportSetUp.Body.AddColumn(new ColumnSetup
             {
-                reportSetUp.Body.AddColumn(new ColumnSetup
+                Format = new Format(210, 9)
                 {
-                    Format = new Format(170, 7)
-                    {
-                        Position = new(10, (210 - 170) / 2),
-                        FontDetails = new Font("Arial", new Shade(18)),
-                        Background = "white",
-                        TextAlignment = TextAlignment.Left,
-                    },
-                    DataColumn = new Item("NoFeedbackRecords"),
-                });
-                OffSetY += 9;
-            }
-            else
-            {
+                    Margin = new(0, 0, 0, 20),
 
-                reportSetUp.Body.AddColumn(new ColumnSetup
-                {
-                    Format = new Format((int)(170 * 0.3), 7)
-                    {
-                        Position = new(OffSetY, (210 - 170) / 2),
-                        Borders = new Border(new Shade(1, "Black"), BorderStyle.solid),
-                        FontDetails = new Font("Arial", new Shade(14, "White"), new FontStyle(700)),
-                        Background = "gray",
-                        TextAlignment = TextAlignment.Center,
-                        Padding = new(1, 0, 2, 0)
+                    FontDetails = new Font("Arial", new Shade(18)),
+                    Background = "white",
+                    TextAlignment = TextAlignment.Left,
+                    Padding = new(0, 0, 0, 20)
 
-                    },
-                    DataColumn = new Item("FeedbackDateTitle"),
-                });
+                },
+                DataColumn = new Item("NoFeedbackRecords"),
+            });
 
-                reportSetUp.Body.AddColumn(new ColumnSetup
-                {
-                    Format = new Format((int)(170 * 0.4), 7)
-                    {
-                        Position = new(OffSetY, (210 - 170) / 2 + (int)(170 * 0.3)),
-                        Borders = new Border(new Shade(1, "Black"), BorderStyle.solid),
-                        FontDetails = new Font("Arial", new Shade(14, "White"), new FontStyle(700)),
-                        Background = "gray",
-                        TextAlignment = TextAlignment.Center,
-                        Padding = new(1, 0, 2, 0)
-
-
-                    },
-                    DataColumn = new Item("FeedbackUserTitle"),
-                });
-
-                reportSetUp.Body.AddColumn(new ColumnSetup
-                {
-                    Format = new Format((int)(170 * 0.30), 7)
-                    {
-                        Position = new(OffSetY, (210 - 170) / 2 + (int)(170 * 0.3) + (int)(170 * 0.40)),
-                        Borders = new Border(new Shade(1, "Black"), BorderStyle.solid),
-                        FontDetails = new Font("Arial", new Shade(14, "White"), new FontStyle(700)),
-                        Background = "gray",
-                        TextAlignment = TextAlignment.Center,
-                        Padding = new(1, 0, 2, 0)
-
-
-                    },
-                    DataColumn = new Item("FeedbackGradeTitle"),
-                });
-
-                OffSetY += 9;
-
-                int FeedbackRowHeight = 9;
-                int TotalFeedbacks = CustomerFeedbackResponses.Count();
-                int FeedbacksTableHeight = TotalFeedbacks * FeedbackRowHeight;
-
-                reportSetUp.Body.Row = new Row { Dimension = new Dimension(210, 9), };
-
-                reportSetUp.Body.AddColumn(new ColumnSetup
-                {
-                    Format = new Format((int)(170 * 0.3), 7)
-                    {
-                        Position = new(OffSetY, (210 - 170) / 2),
-                        Borders = new Border(new Shade(1, "Black"), BorderStyle.solid),
-                        FontDetails = new Font("Arial", new Shade(12)),
-                        Background = "white",
-                        TextAlignment = TextAlignment.Center,
-                        Padding = new(2, 0, 0, 0)
-
-
-                    },
-                    DataColumn = new Item("FeedbackDateColumn"),
-                });
-
-                reportSetUp.Body.AddColumn(new ColumnSetup
-                {
-                    Format = new Format((int)(170 * 0.40), 7)
-                    {
-                        Position = new(OffSetY, (210 - 170) / 2 + (int)(170 * 0.3)),
-                        Borders = new Border(new Shade(1, "Black"), BorderStyle.solid),
-                        FontDetails = new Font("Arial", new Shade(12)),
-                        Background = "white",
-                        TextAlignment = TextAlignment.Center,
-                        Padding = new(2, 0, 0, 0)
-
-
-                    },
-                    DataColumn = new Item("FeedbackUserColumn"),
-                });
-
-                reportSetUp.Body.AddColumn(new ColumnSetup
-                {
-                    Format = new Format((int)(170 * 0.30), 7)
-                    {
-                        Position = new(OffSetY, (210 - 170) / 2 + (int)(170 * 0.3) + (int)(170 * 0.40)),
-                        Borders = new Border(new Shade(1, "Black"), BorderStyle.solid),
-                        FontDetails = new Font("Arial", new Shade(12)),
-                        Background = "white",
-                        TextAlignment = TextAlignment.Center,
-                        Padding = new(2, 0, 0, 0)
-
-                    },
-                    DataColumn = new Item("FeedbackGradeColumn"),
-                });
-                OffSetY += FeedbacksTableHeight;
-
-            }
-            #endregion
-
-            #region NonConformity
-
-            reportSetUp.Body.Row = new Row { Dimension = new Dimension(210, 10) };
 
             reportSetUp.Body.AddColumn(new ColumnSetup
             {
-                Format = new Format(200, 8)
+                Format = new Format((int)(170 * 0.3), 7)
                 {
-                    Position = new(OffSetY, 20),
-                    FontDetails = new Font("Arial", new Shade(20, "Black"), new FontStyle(700)),
-                    Background = "white",
-                    TextAlignment = TextAlignment.Left,
+                    Position = new(0, 20),
+                    Borders = new Border(new Shade(1, "Black"), BorderStyle.solid),
+                    FontDetails = new Font("Arial", new Shade(14, "White"), new FontStyle(700)),
+                    Background = "gray",
+                    TextAlignment = TextAlignment.Center,
                     Padding = new(1, 0, 2, 0),
 
                 },
-                DataColumn = new Item("NonConformitiesTitle"),
+                DataColumn = new Item("FeedbackDateTitle"),
             });
 
-            OffSetY += 10;
-
-            reportSetUp.Body.Row = new Row { Dimension = new Dimension(210, 9) };
-
-            if (!NonConformityResponses.Any())
+            reportSetUp.Body.AddColumn(new ColumnSetup
             {
-                reportSetUp.Body.AddColumn(new ColumnSetup
+                Format = new Format((int)(170 * 0.4), 7)
                 {
-                    Format = new Format(170, 7)
-                    {
-                        Position = new(OffSetY, (210 - 170) / 2),
-                        FontDetails = new Font("Arial", new Shade(18)),
-                        Background = "white",
-                        TextAlignment = TextAlignment.Left,
-                        Padding = new(1, 0, 2, 0)
-                    },
-                    DataColumn = new Item("NoNonConformityRecords"),
-                });
-                OffSetY += 15;
-            }
-            else
+                    Position= new(0,71),
+                    Borders = new Border(new Shade(1, "Black"), BorderStyle.solid),
+                    FontDetails = new Font("Arial", new Shade(14, "White"), new FontStyle(700)),
+                    Background = "gray",
+                    TextAlignment = TextAlignment.Center,
+                    Padding = new(1, 0, 2, 0),
+
+                },
+                DataColumn = new Item("FeedbackUserIdTitle"),
+            });
+
+            reportSetUp.Body.AddColumn(new ColumnSetup
             {
-                OffSetY += 5;
-
-                reportSetUp.Body.AddColumn(new ColumnSetup
+                Format = new Format((int)(170 * 0.3), 7)
                 {
-                    Format = new Format((int)(190 * 0.2), 7)
-                    {
-                        Position = new(OffSetY, ((210 - 190) / 2)),
-                        Borders = new Border(new Shade(1, "Black"), BorderStyle.solid),
-                        FontDetails = new Font("Arial", new Shade(14, "White"), new FontStyle(700)),
-                        Background = "gray",
-                        TextAlignment = TextAlignment.Center,
-                        Padding = new(1, 0, 2, 0)
+                    Position = new(0, 139),
+                    Borders = new Border(new Shade(1, "Black"), BorderStyle.solid),
+                    FontDetails = new Font("Arial", new Shade(14, "White"), new FontStyle(700)),
+                    Background = "gray",
+                    TextAlignment = TextAlignment.Center,
+                    Padding = new(1, 0, 2, 0),
 
-                    },
-                    DataColumn = new Item("NonConfDateTitle"),
-                });
-                reportSetUp.Body.AddColumn(new ColumnSetup
+                },
+                DataColumn = new Item("FeedbackRatingTitle"),
+            });
+
+
+            reportSetUp.Body.AddColumn(new ColumnSetup
+            {
+                Format = new Format((int)(170 * 0.3), 7)
                 {
-                    Format = new Format((int)(190 * 0.2), 7)
-                    {
-                        Position = new(OffSetY, ((210 - 190) / 2) + (int)(190 * 0.2)),
-                        Borders = new Border(new Shade(1, "Black"), BorderStyle.solid),
-                        FontDetails = new Font("Arial", new Shade(14, "White"), new FontStyle(700)),
-                        Background = "gray",
-                        TextAlignment = TextAlignment.Center,
-                        Padding = new(1, 0, 2, 0)
-                    },
-                    DataColumn = new Item("NonConfIdTitle"),
-                });
-                reportSetUp.Body.AddColumn(new ColumnSetup
+                    Position = new(0, 20),
+                    Margin = new(0, 0, 0, 20),
+                    Borders = new Border(new Shade(1, "Black"), BorderStyle.solid),
+                    FontDetails = new Font("Arial", new Shade(12)),
+                    Background = "white",
+                    TextAlignment = TextAlignment.Center,
+                    Padding = new(2, 0, 0, 0)
+
+
+                },
+                DataColumn = new Item("FeedbackDateColumn"),
+            });
+
+            reportSetUp.Body.AddColumn(new ColumnSetup
+            {
+                Format = new Format((int)(170 * 0.4), 7)
                 {
-                    Format = new Format((int)(190 * 0.20), 7)
-                    {
-                        Position = new(OffSetY, ((210 - 190) / 2) + (int)(190 * 0.4)),
-                        Borders = new Border(new Shade(1, "Black"), BorderStyle.solid),
-                        FontDetails = new Font("Arial", new Shade(14, "White"), new FontStyle(700)),
-                        Background = "gray",
-                        TextAlignment = TextAlignment.Center,
-                        Padding = new(1, 0, 2, 0)
-                    },
-                    DataColumn = new Item("NonConfProcessTitle"),
-                });
-                reportSetUp.Body.AddColumn(new ColumnSetup
+                    Position = new(0, 71),
+                    Margin = new(0, 0, 0, 20),
+                    Borders = new Border(new Shade(1, "Black"), BorderStyle.solid),
+                    FontDetails = new Font("Arial", new Shade(12)),
+                    Background = "white",
+                    TextAlignment = TextAlignment.Center,
+                    Padding = new(2, 0, 0, 0)
+
+
+                },
+                DataColumn = new Item("FeedbackUserIdColumn"),
+            });
+
+            reportSetUp.Body.AddColumn(new ColumnSetup
+            {
+                Format = new Format((int)(170 * 0.3), 7)
                 {
-                    Format = new Format((int)(190 * 0.25), 7)
-                    {
-                        Position = new(OffSetY, ((210 - 190) / 2) + (int)(190 * 0.60)),
-                        Borders = new Border(new Shade(1, "Black"), BorderStyle.solid),
-                        FontDetails = new Font("Arial", new Shade(14, "White"), new FontStyle(700)),
-                        Background = "gray",
-                        TextAlignment = TextAlignment.Center,
-                        Padding = new(1, 0, 2, 0)
-                    },
-                    DataColumn = new Item("NonConfCauseTitle"),
-                });
-                reportSetUp.Body.AddColumn(new ColumnSetup
-                {
-                    Format = new Format((int)(190 * 0.15), 7)
-                    {
-                        Position = new(OffSetY, ((210 - 190) / 2) + (int)(190 * 0.85)),
-                        Borders = new Border(new Shade(1, "Black"), BorderStyle.solid),
-                        FontDetails = new Font("Arial", new Shade(14, "White"), new FontStyle(700)),
-                        Background = "gray",
-                        TextAlignment = TextAlignment.Center,
-                        Padding = new(1, 0, 2, 0)
-                    },
-                    DataColumn = new Item("NonConfStatusTitle"),
-                });
+                    Position = new(0, 139),
+                    Margin = new(0, 0, 0, 20),
+                    Borders = new Border(new Shade(1, "Black"), BorderStyle.solid),
+                    FontDetails = new Font("Arial", new Shade(12)),
+                    Background = "white",
+                    TextAlignment = TextAlignment.Center,
+                    Padding = new(2, 0, 0, 0)
+                },
+                DataColumn = new Item("FeedbackRatingColumn"),
+            });
 
-                OffSetY += 9;
-
-                int NonConformityRowHeight = 9;
-                int TotalNonConformities = NonConformityResponses.Count();
-                int TableNonConformityHeight = TotalNonConformities * NonConformityRowHeight;
-
-                reportSetUp.Body.Row = new Row { Dimension = new Dimension(210, 9) };
-
-                reportSetUp.Body.AddColumn(new ColumnSetup
-                {
-                    Format = new Format((int)(190 * 0.2), 7)
-                    {
-                        Position = new(OffSetY, ((210 - 190) / 2)),
-                        Borders = new Border(new Shade(1, "Black"), BorderStyle.solid),
-                        FontDetails = new Font("Arial", new Shade(12, "black")),
-                        Background = "white",
-                        TextAlignment = TextAlignment.Center,
-                        Padding = new(2, 0, 0, 0)
-
-                    },
-                    DataColumn = new Item("NonConfDateColumn"),
-                });
-                reportSetUp.Body.AddColumn(new ColumnSetup
-                {
-                    Format = new Format((int)(190 * 0.2), 7)
-                    {
-                        Position = new(OffSetY, ((210 - 190) / 2) + (int)(190 * 0.2)),
-                        Borders = new Border(new Shade(1, "Black"), BorderStyle.solid),
-                        FontDetails = new Font("Arial", new Shade(10, "black")),
-                        Background = "white",
-                        TextAlignment = TextAlignment.Center,
-                        Padding = new(1, 0, 1, 0)
-
-                    },
-                    DataColumn = new Item("NonConfIdColumn"),
-                });
-                reportSetUp.Body.AddColumn(new ColumnSetup
-                {
-                    Format = new Format((int)(190 * 0.20), 7)
-                    {
-                        Position = new(OffSetY, ((210 - 190) / 2) + (int)(190 * 0.4)),
-                        Borders = new Border(new Shade(1, "Black"), BorderStyle.solid),
-                        FontDetails = new Font("Arial", new Shade(12, "black")),
-                        Background = "white",
-                        TextAlignment = TextAlignment.Center,
-                        Padding = new(2, 0, 0, 0)
-
-                    },
-                    DataColumn = new Item("NonConfProcessColumn"),
-                });
-                reportSetUp.Body.AddColumn(new ColumnSetup
-                {
-                    Format = new Format((int)(190 * 0.25), 7)
-                    {
-                        Position = new(OffSetY, ((210 - 190) / 2) + (int)(190 * 0.60)),
-                        Borders = new Border(new Shade(1, "Black"), BorderStyle.solid),
-                        FontDetails = new Font("Arial", new Shade(12, "black")),
-                        Background = "white",
-                        TextAlignment = TextAlignment.Center,
-                        Padding = new(2, 0, 0, 0)
-
-                    },
-                    DataColumn = new Item("NonConfCauseColumn"),
-                });
-                reportSetUp.Body.AddColumn(new ColumnSetup
-                {
-                    Format = new Format((int)(190 * 0.15), 7)
-                    {
-                        Position = new(OffSetY, ((210 - 190) / 2) + (int)(190 * 0.85)),
-                        Borders = new Border(new Shade(1, "Black"), BorderStyle.solid),
-                        FontDetails = new Font("Arial", new Shade(12, "black")),
-                        Background = "white",
-                        TextAlignment = TextAlignment.Center,
-                        Padding = new(2, 0, 0, 0)
-
-                    },
-                    DataColumn = new Item("NonConfStatusColumn"),
-                });
-                OffSetY += TableNonConformityHeight;
-
-            }
             #endregion
+
+            #region NonConformities
+
+            reportSetUp.Body.AddColumn(new ColumnSetup
+            {
+                Format = new Format(210, 9)
+                {
+                    FontDetails = new Font("Arial", new Shade(20, "Black"), new FontStyle(700)),
+                    TextAlignment = TextAlignment.Left,
+                    Padding = new(0, 0, 0, 20)
+                },
+                DataColumn = new Item("NonConformityTitle"),
+            });
+
+            reportSetUp.Body.AddColumn(new ColumnSetup
+            {
+                Format = new Format(210, 9)
+                {
+                    FontDetails = new Font("Arial", new Shade(18)),
+                    Background = "white",
+                    TextAlignment = TextAlignment.Left,
+                    Padding = new(0, 0, 0, 20)
+
+                },
+                DataColumn = new Item("NoNonConformityRecords"),
+            });
+
+
+            reportSetUp.Body.AddColumn(new ColumnSetup
+            {
+                Format = new Format((int)(190 * 0.20), 7)
+                {
+                    Position = new(0, 10),
+                    Borders = new Border(new Shade(1, "Black"), BorderStyle.solid),
+                    FontDetails = new Font("Arial", new Shade(14, "White"), new FontStyle(700)),
+                    Background = "gray",
+                    TextAlignment = TextAlignment.Center,
+                    Padding = new(1, 0, 2, 0)
+
+                },
+                DataColumn = new Item("NonConformityDateTitle"),
+            });
+
+
+            reportSetUp.Body.AddColumn(new ColumnSetup
+            {
+                Format = new Format((int)(190 * 0.2), 7)
+                {
+                    Position = new(0, 48),
+                    Borders = new Border(new Shade(1, "Black"), BorderStyle.solid),
+                    FontDetails = new Font("Arial", new Shade(14, "White"), new FontStyle(700)),
+                    Background = "gray",
+                    TextAlignment = TextAlignment.Center,
+                    Padding = new(1, 0, 2, 0)
+
+                },
+                DataColumn = new Item("NonConformityIdTitle"),
+            });
+
+
+            reportSetUp.Body.AddColumn(new ColumnSetup
+            {
+                Format = new Format((int)(190 * 0.2), 7)
+                {
+                    Position = new(0, 86),
+                    Borders = new Border(new Shade(1, "Black"), BorderStyle.solid),
+                    FontDetails = new Font("Arial", new Shade(14, "White"), new FontStyle(700)),
+                    Background = "gray",
+                    TextAlignment = TextAlignment.Center,
+                    Padding = new(1, 0, 2, 0)
+
+                },
+                DataColumn = new Item("NonConformityProcessTitle"),
+            });
+
+
+            reportSetUp.Body.AddColumn(new ColumnSetup
+            {
+                Format = new Format((int)(190 * 0.25), 7)
+                {
+                    Position = new(0, 124),
+                    Borders = new Border(new Shade(1, "Black"), BorderStyle.solid),
+                    FontDetails = new Font("Arial", new Shade(14, "White"), new FontStyle(700)),
+                    Background = "gray",
+                    TextAlignment = TextAlignment.Center,
+                    Padding = new(1, 0, 2, 0)
+
+                },
+                DataColumn = new Item("NonConformityCauseTitle"),
+            });
+
+
+            reportSetUp.Body.AddColumn(new ColumnSetup
+            {
+                Format = new Format((int)(190 * 0.15), 7)
+                {
+                    Position = new(0, 171.5m),
+                    Borders = new Border(new Shade(1, "Black"), BorderStyle.solid),
+                    FontDetails = new Font("Arial", new Shade(14, "White"), new FontStyle(700)),
+                    Background = "gray",
+                    TextAlignment = TextAlignment.Center,
+                    Padding = new(1, 0, 2, 0)
+
+                },
+                DataColumn = new Item("NonConformityStatusTitle"),
+            });
+
+
+            reportSetUp.Body.AddColumn(new ColumnSetup
+            {
+                Format = new Format((int)(190 * 0.2), 7)
+                {
+                    Position = new(0, 10),
+                    Borders = new Border(new Shade(1, "Black"), BorderStyle.solid),
+                    FontDetails = new Font("Arial", new Shade(12, "black")),
+                    Background = "white",
+                    TextAlignment = TextAlignment.Center,
+                    Padding = new(2, 0, 0, 0)
+                },
+                DataColumn = new Item("NonConformityDateColumn"),
+            });
+
+            reportSetUp.Body.AddColumn(new ColumnSetup
+            {
+                Format = new Format((int)(190 * 0.2), 7)
+                {
+                    Position = new(0, 48),
+                    Borders = new Border(new Shade(1, "Black"), BorderStyle.solid),
+                    FontDetails = new Font("Arial", new Shade(10, "black")),
+                    Background = "white",
+                    TextAlignment = TextAlignment.Center,
+                    Padding = new(1, 0, 1, 0)
+                },
+                DataColumn = new Item("NonConformityIdColumn"),
+            });
+
+            reportSetUp.Body.AddColumn(new ColumnSetup
+            {
+                Format = new Format((int)(190 * 0.2), 7)
+                {
+                    Position = new(0, 86),
+                    Borders = new Border(new Shade(1, "Black"), BorderStyle.solid),
+                    FontDetails = new Font("Arial", new Shade(12, "black")),
+                    Background = "white",
+                    TextAlignment = TextAlignment.Center,
+                    Padding = new(2, 0, 0, 0)
+                },
+                DataColumn = new Item("NonConformityProcessColumn"),
+            });
+
+            reportSetUp.Body.AddColumn(new ColumnSetup
+            {
+                Format = new Format((int)(190 * 0.25), 7)
+                {
+                    Position = new(0, 124),
+                    Borders = new Border(new Shade(1, "Black"), BorderStyle.solid),
+                    FontDetails = new Font("Arial", new Shade(12, "black")),
+                    Background = "white",
+                    TextAlignment = TextAlignment.Center,
+                    Padding = new(2, 0, 0, 0)
+                },
+                DataColumn = new Item("NonConformityCauseColumn"),
+            });
+
+            reportSetUp.Body.AddColumn(new ColumnSetup
+            {
+                Format = new Format((int)(190 * 0.15), 7)
+                {
+                    Position = new(0, 171.5m),
+                    Borders = new Border(new Shade(1, "Black"), BorderStyle.solid),
+                    FontDetails = new Font("Arial", new Shade(12, "black")),
+                    Background = "white",
+                    TextAlignment = TextAlignment.Center,
+                    Padding = new(2, 0, 0, 0)
+                },
+                DataColumn = new Item("NonConformityStatusColumn"),
+            });
+
+            #endregion
+
 
             #region IncidentReports
 
-            reportSetUp.Body.Row = new Row { Dimension = new Dimension(210, 10) };
+
             reportSetUp.Body.AddColumn(new ColumnSetup
             {
-                Format = new Format(200, 8)
+                Format = new Format(210, 9)
                 {
-                    Position = new(OffSetY, 20),
                     FontDetails = new Font("Arial", new Shade(20, "Black"), new FontStyle(700)),
+                    TextAlignment = TextAlignment.Left,
+                    Padding = new(0, 0, 0, 20)
+                },
+                DataColumn = new Item("IncidentReportTitle"),
+            });
+
+            reportSetUp.Body.AddColumn(new ColumnSetup
+            {
+                Format = new Format(210, 9)
+                {
+                    FontDetails = new Font("Arial", new Shade(18)),
                     Background = "white",
                     TextAlignment = TextAlignment.Left,
+                    Padding = new(0, 0, 0, 20)
+
                 },
-                DataColumn = new Item("IncidentReportsTitle"),
+                DataColumn = new Item("NoIncidentReportsRecords"),
             });
 
-            OffSetY += 10;
-
-            reportSetUp.Body.Row = new Row { Dimension = new Dimension(210, 9) };
-
-            if (!IncidentReportResponses.Any())
+            reportSetUp.Body.AddColumn(new ColumnSetup
             {
-                reportSetUp.Body.AddColumn(new ColumnSetup
+                Format = new Format((int)(190 * 0.2), 7)
                 {
-                    Format = new Format(170, 7)
-                    {
-                        Position = new(OffSetY, (210 - 170) / 2),
-                        FontDetails = new Font("Arial", new Shade(18)),
-                        Background = "white",
-                        TextAlignment = TextAlignment.Left,
-                        Padding = new(1, 0, 2, 0)
-                    },
-                    DataColumn = new Item("NoIncidentReportsRecords"),
-                });
-                OffSetY += 9;
-            }
-            else
+                    Position = new(0, 10),
+                    Borders = new Border(new Shade(1, "Black"), BorderStyle.solid),
+                    FontDetails = new Font("Arial", new Shade(14, "White"), new FontStyle(700)),
+                    Background = "gray",
+                    TextAlignment = TextAlignment.Center,
+                    Padding = new(1, 0, 2, 0),
+
+                },
+                DataColumn = new Item("IncidentReportDateTitle"),
+            });
+
+
+            reportSetUp.Body.AddColumn(new ColumnSetup
             {
-                OffSetY += 5;
-                reportSetUp.Body.AddColumn(new ColumnSetup
+                Format = new Format((int)(190 * 0.5), 7)
                 {
-                    Format = new Format((int)(190 * 0.2), 7)
-                    {
-                        Position = new(OffSetY, ((210 - 190) / 2)),
-                        Borders = new Border(new Shade(1, "Black"), BorderStyle.solid),
-                        FontDetails = new Font("Arial", new Shade(14, "White"), new FontStyle(700)),
-                        Background = "gray",
-                        TextAlignment = TextAlignment.Center,
-                        Padding = new(1, 0, 2, 0)
+                    Position = new(0, 48),
+                    Borders = new Border(new Shade(1, "Black"), BorderStyle.solid),
+                    FontDetails = new Font("Arial", new Shade(14, "White"), new FontStyle(700)),
+                    Background = "gray",
+                    TextAlignment = TextAlignment.Center,
+                    Padding = new(1, 0, 2, 0),
 
+                },
+                DataColumn = new Item("IncidentReportDescriptionTitle"),
+            });
 
-                    },
-                    DataColumn = new Item("IncidentReportsDateTitle"),
-                });
-                reportSetUp.Body.AddColumn(new ColumnSetup
-                {
-                    Format = new Format((int)(190 * 0.50), 7)
-                    {
-                        Position = new(OffSetY, ((210 - 190) / 2) + (int)(190 * 0.2)),
-                        Borders = new Border(new Shade(1, "Black"), BorderStyle.solid),
-                        FontDetails = new Font("Arial", new Shade(14, "White"), new FontStyle(700)),
-                        Background = "gray",
-                        TextAlignment = TextAlignment.Center,
-                        Padding = new(1, 0, 2, 0)
-
-                    },
-                    DataColumn = new Item("IncidentReportsDescTitle"),
-                });
-                reportSetUp.Body.AddColumn(new ColumnSetup
-                {
-                    Format = new Format((int)(190 * 0.15), 7)
-                    {
-                        Position = new(OffSetY, ((210 - 190) / 2) + (int)(190 * 0.7)),
-                        Borders = new Border(new Shade(1, "Black"), BorderStyle.solid),
-                        FontDetails = new Font("Arial", new Shade(14, "White"), new FontStyle(700)),
-                        Background = "gray",
-                        TextAlignment = TextAlignment.Center,
-                        Padding = new(1, 0, 2, 0)
-
-                    },
-                    DataColumn = new Item("IncidentReportsAffectedTitle"),
-                });
-                reportSetUp.Body.AddColumn(new ColumnSetup
-                {
-                    Format = new Format((int)(190 * 0.15), 7)
-                    {
-                        Position = new(OffSetY, ((210 - 190) / 2) + (int)(190 * 0.85)),
-                        Borders = new Border(new Shade(1, "Black"), BorderStyle.solid),
-                        FontDetails = new Font("Arial", new Shade(14, "White"), new FontStyle(700)),
-                        Background = "gray",
-                        TextAlignment = TextAlignment.Center,
-                        Padding = new(1, 0, 2, 0)
-
-                    },
-                    DataColumn = new Item("IncidentReportsSeverityTitle"),
-                });
-
-                OffSetY += 9;
-
-                int IncidentReportRowHeight = 9;
-                int TotalIncidentReports = IncidentReportResponses.Count();
-                int TableIncidentReportHeight = TotalIncidentReports * IncidentReportRowHeight;
-
-                reportSetUp.Body.Row = new Row { Dimension = new Dimension(210, 9) };
-
-                reportSetUp.Body.AddColumn(new ColumnSetup
-                {
-                    Format = new Format((int)(190 * 0.2), 7)
-                    {
-                        Position = new(OffSetY, ((210 - 190) / 2)),
-                        Borders = new Border(new Shade(1, "Black"), BorderStyle.solid),
-                        FontDetails = new Font("Arial", new Shade(12, "black")),
-                        Background = "white",
-                        TextAlignment = TextAlignment.Center,
-                        Padding = new(2, 0, 0, 0)
-
-
-                    },
-                    DataColumn = new Item("IncidentReportsDateColumn"),
-                });
-                reportSetUp.Body.AddColumn(new ColumnSetup
-                {
-                    Format = new Format((int)(190 * 0.50), 7)
-                    {
-                        Position = new(OffSetY, ((210 - 190) / 2) + (int)(190 * 0.2)),
-                        Borders = new Border(new Shade(1, "Black"), BorderStyle.solid),
-                        FontDetails = new Font("Arial", new Shade(12, "black")),
-                        Background = "white",
-                        TextAlignment = TextAlignment.Center,
-                        Padding = new(2, 0, 0, 0)
-
-                    },
-                    DataColumn = new Item("IncidentReportsDescColumn"),
-                });
-                reportSetUp.Body.AddColumn(new ColumnSetup
-                {
-                    Format = new Format((int)(190 * 0.15), 7)
-                    {
-                        Position = new(OffSetY, ((210 - 190) / 2) + (int)(190 * 0.7)),
-                        Borders = new Border(new Shade(1, "Black"), BorderStyle.solid),
-                        FontDetails = new Font("Arial", new Shade(12, "black")),
-                        Background = "white",
-                        TextAlignment = TextAlignment.Center,
-                        Padding = new(2, 0, 0, 0)
-
-
-                    },
-                    DataColumn = new Item("IncidentReportsAffectedColumn"),
-                });
-                reportSetUp.Body.AddColumn(new ColumnSetup
-                {
-                    Format = new Format((int)(190 * 0.15), 7)
-                    {
-                        Position = new(OffSetY, ((210 - 190) / 2) + (int)(190 * 0.85)),
-                        Borders = new Border(new Shade(1, "Black"), BorderStyle.solid),
-                        FontDetails = new Font("Arial", new Shade(12, "black")),
-                        Background = "white",
-                        TextAlignment = TextAlignment.Center,
-                        Padding = new(2, 0, 0, 0)
-
-                    },
-                    DataColumn = new Item("IncidentReportsSeverityColumn"),
-                });
-
-                OffSetY += TableIncidentReportHeight;
-
-            }
-
-            #endregion
-
-            #region Footer
-            reportSetUp.Footer = new Section(new Format(210, 50));
-            reportSetUp.Footer.AddColumn(new ColumnSetup
+            reportSetUp.Body.AddColumn(new ColumnSetup
             {
-                Format = new Format(200, 10) { Position = new(5, 5) },
-                DataColumn = new Item("FooterText")
+                Format = new Format((int)(190 * 0.15), 7)
+                {
+                    Position = new(0, 143),
+                    Borders = new Border(new Shade(1, "Black"), BorderStyle.solid),
+                    FontDetails = new Font("Arial", new Shade(14, "White"), new FontStyle(700)),
+                    Background = "gray",
+                    TextAlignment = TextAlignment.Center,
+                    Padding = new(1, 0, 2, 0),
+
+                },
+                DataColumn = new Item("IncidentReportProcessTitle"),
+            });
+
+            reportSetUp.Body.AddColumn(new ColumnSetup
+            {
+                Format = new Format((int)(190 * 0.15), 7)
+                {
+                    Position = new(0, 171.5m),
+                    Borders = new Border(new Shade(1, "Black"), BorderStyle.solid),
+                    FontDetails = new Font("Arial", new Shade(14, "White"), new FontStyle(700)),
+                    Background = "gray",
+                    TextAlignment = TextAlignment.Center,
+                    Padding = new(1, 0, 2, 0),
+
+                },
+                DataColumn = new Item("IncidentReportSeverityTitle"),
+            });
+
+
+
+            reportSetUp.Body.AddColumn(new ColumnSetup
+            {
+                Format = new Format((int)(190 * 0.2), 7)
+                {
+                    Position = new(0, 10),
+                    Borders = new Border(new Shade(1, "Black"), BorderStyle.solid),
+                    FontDetails = new Font("Arial", new Shade(12)),
+                    Background = "white",
+                    TextAlignment = TextAlignment.Center,
+                    Padding = new(2, 0, 0, 0)
+                },
+                DataColumn = new Item("IncidentReportDateColumn"),
+            });
+
+            reportSetUp.Body.AddColumn(new ColumnSetup
+            {
+                Format = new Format((int)(190 * 0.5), 7)
+                {
+                    Position = new(0, 48),
+                    Margin = new(0, 0, 0, 20),
+                    Borders = new Border(new Shade(1, "Black"), BorderStyle.solid),
+                    FontDetails = new Font("Arial", new Shade(12)),
+                    Background = "white",
+                    TextAlignment = TextAlignment.Center,
+                    Padding = new(2, 0, 0, 0)
+                },
+                DataColumn = new Item("IncidentReportDescriptionColumn"),
+            });
+
+
+            reportSetUp.Body.AddColumn(new ColumnSetup
+            {
+                Format = new Format((int)(190 * 0.15), 7)
+                {
+                    Position = new(0, 143),
+                    Borders = new Border(new Shade(1, "Black"), BorderStyle.solid),
+                    FontDetails = new Font("Arial", new Shade(12)),
+                    Background = "white",
+                    TextAlignment = TextAlignment.Center,
+                    Padding = new(2, 0, 0, 0)
+                },
+                DataColumn = new Item("IncidentReportProcessColumn"),
+            });
+
+            reportSetUp.Body.AddColumn(new ColumnSetup
+            {
+                Format = new Format((int)(190 * 0.15), 7)
+                {
+                    Position = new(0, 171.5m),
+                    Borders = new Border(new Shade(1, "Black"), BorderStyle.solid),
+                    FontDetails = new Font("Arial", new Shade(12)),
+                    Background = "white",
+                    TextAlignment = TextAlignment.Center,
+                    Padding = new(2, 0, 0, 0)
+                },
+                DataColumn = new Item("IncidentReportProcessColumn"),
             });
             #endregion
 
-            var data = new List<ColumnData>();
+            int rowIndex = 1;
 
-            #region DataTitle
-            data.Add(new ColumnData
+            // === DATA ===
+            var data = new List<ColumnData>
             {
-                Section = SectionType.Header,
-                Column = new Item("HeaderText"),
-                Value = $"Audit Report – Order: {entityId}",
-                Row = 1
-            });
-            data.Add(new ColumnData
-            {
-                Section = SectionType.Header,
-                Column = new Item("HeaderSubText"),
-                Value = $"Fecha de creación: {UtcFrom:yyyy-MM-dd}\nEstatus actual: Delivered",
-                Row = 2
-            });
-            #endregion
+                new ColumnData { Section = SectionType.Header, Column = new Item("HeaderText"), Value = $"Audit Report – Order: {entityId}" },
+                new ColumnData { Section = SectionType.Header, Column = new Item("HeaderSubText"), Value = $"Fecha de creación: {UtcFrom:yyyy-MM-dd}\nEstatus actual: Delivered" },
+                
+            };
 
-            #region FeedbackData
-            data.Add(new ColumnData
-            {
-                Section = SectionType.Body,
-                Column = new Item("FeedbackTitle"),
-                Value = "1. Feedback de Cliente (Feedbacks)",
-                Row = 1
-            });
-
+            data.Add(new ColumnData { Section = SectionType.Body, Column = new Item("FeedbackTitle"), Value = "1. Feedback de Cliente (Feedbacks)", Row = rowIndex++ });
             if (CustomerFeedbackResponses == null || !CustomerFeedbackResponses.Any())
-            {
+            {  
                 data.Add(new ColumnData
                 {
                     Section = SectionType.Body,
                     Column = new Item("NoFeedbackRecords"),
                     Value = "No hay registros en estas fechas",
-                    Row = 1
+                    Row = rowIndex++
                 });
             }
             else
             {
-                data.Add(new ColumnData
+                data.AddRange(new[]
                 {
-                    Section = SectionType.Body,
-                    Column = new Item("FeedbackDateTitle"),
-                    Value = "Fecha",
-                    Row = 1
+                    new ColumnData { Section = SectionType.Body, Column = new Item("FeedbackDateTitle"), Value = "Fecha" , Row = rowIndex},
+                    new ColumnData { Section = SectionType.Body, Column = new Item("FeedbackUserIdTitle"), Value = "UserId" , Row = rowIndex},
+                    new ColumnData { Section = SectionType.Body, Column = new Item("FeedbackRatingTitle"), Value = "Rating" , Row = rowIndex},
                 });
-
-                data.Add(new ColumnData
-                {
-                    Section = SectionType.Body,
-                    Column = new Item("FeedbackUserTitle"),
-                    Value = "UserId",
-                    Row = 1
-                });
-
-                data.Add(new ColumnData
-                {
-                    Section = SectionType.Body,
-                    Column = new Item("FeedbackGradeTitle"),
-                    Value = "Rating",
-                    Row = 1
-                });
-
-
-                int rowIndex = 1;
+                rowIndex++;
                 foreach (var feedback in CustomerFeedbackResponses)
                 {
-                    data.Add(new ColumnData
-                    {
-                        Section = SectionType.Body,
-                        Column = new Item("FeedbackDateColumn"),
-                        Value = feedback.ReportedAt.ToString("yyyy-MM-dd"),
-                        Row = rowIndex
-                    });
-                    data.Add(new ColumnData
-                    {
-                        Section = SectionType.Body,
-                        Column = new Item("FeedbackUserColumn"),
-                        Value = feedback.CustomerId ?? "",
-                        Row = rowIndex
-                    });
-                    data.Add(new ColumnData
-                    {
-                        Section = SectionType.Body,
-                        Column = new Item("FeedbackGradeColumn"),
-                        Value = feedback.Rating.ToString() ?? "",
-                        Row = rowIndex
-                    });
+                    data.Add(new ColumnData { Section = SectionType.Body, Column = new Item("FeedbackDateColumn"), Value = feedback.ReportedAt.ToString("yyyy-MM-dd") ?? "", Row = rowIndex });
+                    data.Add(new ColumnData { Section = SectionType.Body, Column = new Item("FeedbackUserIdColumn"), Value = feedback.CustomerId ?? "", Row = rowIndex });
+                    data.Add(new ColumnData { Section = SectionType.Body, Column = new Item("FeedbackRatingColumn"), Value = feedback.Rating, Row = rowIndex });
                     rowIndex++;
                 }
             }
-            #endregion
 
-            #region NonConformityData
-
-            data.Add(new ColumnData
-            {
-                Section = SectionType.Body,
-                Column = new Item("NonConformitiesTitle"),
-                Value = "2. No Conformidades (NonConformities)",
-                Row = 1
-            });
-
-            if (NonConformityResponses == null || !NonConformityResponses.Any())
+            data.Add(new ColumnData { Section = SectionType.Body, Column = new Item("NonConformityTitle"), Value = "2. No Conformidades (NonConformities)", Row = rowIndex++ });
+            if(NonConformityResponses == null || !NonConformityResponses.Any())
             {
                 data.Add(new ColumnData
                 {
                     Section = SectionType.Body,
                     Column = new Item("NoNonConformityRecords"),
                     Value = "No hay registros en estas fechas",
-                    Row = 1
+                    Row = rowIndex++
                 });
             }
             else
             {
-                data.Add(new ColumnData
-                {
-                    Section = SectionType.Body,
-                    Column = new Item("NonConfDateTitle"),
-                    Value = "Fecha",
-                    Row = 1
+                data.AddRange(new[]
+{
+                    new ColumnData { Section = SectionType.Body, Column = new Item("NonConformityDateTitle"), Value = "Fecha" , Row = rowIndex},
+                    new ColumnData { Section = SectionType.Body, Column = new Item("NonConformityIdTitle"), Value = "Id" , Row = rowIndex},
+                    new ColumnData { Section = SectionType.Body, Column = new Item("NonConformityProcessTitle"), Value = "Process" , Row = rowIndex},
+                    new ColumnData { Section = SectionType.Body, Column = new Item("NonConformityCauseTitle"), Value = "Cause" , Row = rowIndex},
+                    new ColumnData { Section = SectionType.Body, Column = new Item("NonConformityStatusTitle"), Value = "Status" , Row = rowIndex},
                 });
-
-                data.Add(new ColumnData
-                {
-                    Section = SectionType.Body,
-                    Column = new Item("NonConfIdTitle"),
-                    Value = "Id",
-                    Row = 1
-                });
-
-                data.Add(new ColumnData
-                {
-                    Section = SectionType.Body,
-                    Column = new Item("NonConfProcessTitle"),
-                    Value = "Proccess",
-                    Row = 1
-                });
-
-
-                data.Add(new ColumnData
-                {
-                    Section = SectionType.Body,
-                    Column = new Item("NonConfCauseTitle"),
-                    Value = "Cause",
-                    Row = 1
-                });
-
-                data.Add(new ColumnData
-                {
-                    Section = SectionType.Body,
-                    Column = new Item("NonConfStatusTitle"),
-                    Value = "Status",
-                    Row = 1
-                });
-
-
-                int rowIndex = 1;
+                rowIndex++;
                 foreach (var nonConformity in NonConformityResponses)
                 {
-                    data.Add(new ColumnData
-                    {
-                        Section = SectionType.Body,
-                        Column = new Item("NonConfDateColumn"),
-                        Value = nonConformity.ReportedAt.ToString("yyyy-MM-dd"),
-                        Row = rowIndex
-                    });
-                    data.Add(new ColumnData
-                    {
-                        Section = SectionType.Body,
-                        Column = new Item("NonConfIdColumn"),
-                        Value = nonConformity.Id.ToString() ?? "",
-                        Row = rowIndex
-                    });
-                    data.Add(new ColumnData
-                    {
-                        Section = SectionType.Body,
-                        Column = new Item("NonConfProcessColumn"),
-                        Value = nonConformity.AffectedProcess.ToString() ?? "",
-                        Row = rowIndex
-                    });
-                    data.Add(new ColumnData
-                    {
-                        Section = SectionType.Body,
-                        Column = new Item("NonConfCauseColumn"),
-                        Value = nonConformity.Cause.ToString() ?? "",
-                        Row = rowIndex
-                    });
-                    data.Add(new ColumnData
-                    {
-                        Section = SectionType.Body,
-                        Column = new Item("NonConfStatusColumn"),
-                        Value = nonConformity.Status.ToString() ?? "",
-                        Row = rowIndex
-                    });
+                    data.Add(new ColumnData { Section = SectionType.Body, Column = new Item("NonConformityDateColumn"), Value = nonConformity.ReportedAt.ToString("yyyy-MM-dd"), Row = rowIndex });
+                    data.Add(new ColumnData { Section = SectionType.Body, Column = new Item("NonConformityIdColumn"), Value = nonConformity.Id.ToString(), Row = rowIndex });
+                    data.Add(new ColumnData { Section = SectionType.Body, Column = new Item("NonConformityProcessColumn"), Value = nonConformity.AffectedProcess, Row = rowIndex });
+                    data.Add(new ColumnData { Section = SectionType.Body, Column = new Item("NonConformityCauseColumn"), Value = nonConformity.Cause, Row = rowIndex });
+                    data.Add(new ColumnData { Section = SectionType.Body, Column = new Item("NonConformityStatusColumn"), Value = nonConformity.Status, Row = rowIndex });
                     rowIndex++;
                 }
             }
-            #endregion
 
-            #region IncidentReportsData
 
-            data.Add(new ColumnData
-            {
-                Section = SectionType.Body,
-                Column = new Item("IncidentReportsTitle"),
-                Value = "3. Reportes de Incidencia (IncidentReports)",
-                Row = 1
-            });
-
-            if (!IncidentReportResponses.Any())
+            data.Add(new ColumnData { Section = SectionType.Body, Column = new Item("IncidentReportTitle"), Value = "3. Reportes de Incidencia (IncidentReports)", Row = rowIndex++});
+            if(IncidentReportResponses == null || !IncidentReportResponses.Any())
             {
                 data.Add(new ColumnData
                 {
                     Section = SectionType.Body,
                     Column = new Item("NoIncidentReportsRecords"),
                     Value = "No hay registros en estas fechas",
-                    Row = 1
+                    Row = rowIndex++
                 });
             }
             else
             {
-                data.Add(new ColumnData
+                data.AddRange(new[]
                 {
-                    Section = SectionType.Body,
-                    Column = new Item("IncidentReportsDateTitle"),
-                    Value = "Fecha",
-                    Row = 1
+                    new ColumnData { Section = SectionType.Body, Column = new Item("IncidentReportDateTitle"), Value = "Fecha" , Row = rowIndex},
+                    new ColumnData { Section = SectionType.Body, Column = new Item("IncidentReportDescriptionTitle"), Value = "Description" , Row = rowIndex},
+                    new ColumnData { Section = SectionType.Body, Column = new Item("IncidentReportProcessTitle"), Value = "Description" , Row = rowIndex},
+                    new ColumnData { Section = SectionType.Body, Column = new Item("IncidentReportSeverityTitle"), Value = "Description" , Row = rowIndex},
+
                 });
-
-                data.Add(new ColumnData
-                {
-                    Section = SectionType.Body,
-                    Column = new Item("IncidentReportsDescTitle"),
-                    Value = "Descripcion",
-                    Row = 1
-                });
-
-                data.Add(new ColumnData
-                {
-                    Section = SectionType.Body,
-                    Column = new Item("IncidentReportsAffectedTitle"),
-                    Value = "Process",
-                    Row = 1
-                });
-
-
-                data.Add(new ColumnData
-                {
-                    Section = SectionType.Body,
-                    Column = new Item("IncidentReportsSeverityTitle"),
-                    Value = "Severity",
-                    Row = 1
-                });
-
-                int rowIndex = 1;
+                rowIndex++;
                 foreach (var incidentReport in IncidentReportResponses)
                 {
-                    data.Add(new ColumnData
-                    {
-                        Section = SectionType.Body,
-                        Column = new Item("IncidentReportsDateColumn"),
-                        Value = incidentReport.ReportedAt.ToString("yyyy-MM-dd"),
-                        Row = rowIndex
-                    });
-                    data.Add(new ColumnData
-                    {
-                        Section = SectionType.Body,
-                        Column = new Item("IncidentReportsDescColumn"),
-                        Value = incidentReport.Description.ToString() ?? "",
-                        Row = rowIndex
-                    });
-                    data.Add(new ColumnData
-                    {
-                        Section = SectionType.Body,
-                        Column = new Item("IncidentReportsAffectedColumn"),
-                        Value = incidentReport.AffectedProcess.ToString() ?? "",
-                        Row = rowIndex
-                    });
-                    data.Add(new ColumnData
-                    {
-                        Section = SectionType.Body,
-                        Column = new Item("IncidentReportsSeverityColumn"),
-                        Value = incidentReport.Severity.ToString() ?? "",
-                        Row = rowIndex
-                    });
+                    data.Add(new ColumnData { Section = SectionType.Body, Column = new Item("IncidentReportDateColumn"), Value = incidentReport.ReportedAt.ToString("yyyy-MM-dd") ?? "", Row = rowIndex });
+                    data.Add(new ColumnData { Section = SectionType.Body, Column = new Item("IncidentReportDescriptionColumn"), Value = incidentReport.Description, Row = rowIndex });
+                    data.Add(new ColumnData { Section = SectionType.Body, Column = new Item("IncidentReportProcessColumn"), Value = incidentReport.AffectedProcess, Row = rowIndex });
+                    data.Add(new ColumnData { Section = SectionType.Body, Column = new Item("IncidentReportSeverityColumn"), Value = incidentReport.Severity, Row = rowIndex });
+
                     rowIndex++;
                 }
             }
-            #endregion
+
+
 
 
             await outputPort.Handle(reportSetUp, data);
@@ -882,5 +633,8 @@ namespace ISO9001.GenerateAuditReport.Core.Handlers
 
             await File.WriteAllBytesAsync(fullPath, pdfBytes);
         }
+
     }
+
+
 }
