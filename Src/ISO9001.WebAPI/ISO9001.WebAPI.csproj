@@ -12,7 +12,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\AuditLog\ISO9001.Rest.Mappings\ISO900.AuditLog.Rest.Mappings.csproj" />
+    <ProjectReference Include="..\AuditLog\ISO9001.AuditLog.Rest.Mappings\ISO900.AuditLog.Rest.Mappings.csproj" />
     <ProjectReference Include="..\ISO9001.AuditEvents.Repositories\ISO9001.AuditEvents.Repositories.csproj" />
     <ProjectReference Include="..\ISO9001.Database.InMemory\ISO9001.Database.InMemory.csproj" />
     <ProjectReference Include="..\ISO9001.GenerateAuditReport.IoC\ISO9001.GenerateAuditReport.IoC.csproj" />
