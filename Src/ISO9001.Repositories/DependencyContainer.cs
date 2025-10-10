@@ -1,4 +1,5 @@
 ﻿using ISO9001.AuditLog.Core.Interfaces;
+using ISO9001.CustomerFeedback.Core.Interfaces;
 using ISO9001.GenerateAuditReport.BusinessObjects.Interfaces;
 using ISO9001.GetAllCustomerFeedback.BusinessObjects.Interfaces;
 using ISO9001.GetAllIncidentReports.BusinessObjects.Interfaces;
@@ -38,12 +39,10 @@ namespace ISO9001.Repositories
             services.AddScoped<ICommandAuditLogRepository, CommandAuditLogRepository>();
             services.AddScoped<IQueryableAuditLogRepository, QueryableAuditLogRepository>();
 
-            services.AddScoped<IRegisterCustomerFeedbackRepository, RegisterCustomerFeedbackRepository>();
-            services.AddScoped<IGetAllCustomerFeedbackRepository, GetAllCustomerFeedbackRepository>();
-            services.AddScoped<IGetCustomerFeedbackByIdRepository, GetCustomerFeedbackByIdRepository>();
-            services.AddScoped<IGetCustomerFeedbackByEntityIdRepository, GetCustomerFeedbackByEntityIdRepository>();
-            services.AddScoped<IGetCustomerFeedbackByCustomerIdRepository, GetCustomerFeedbackByCustomerIdRepository>();
-            services.AddScoped<IGetCustomerFeedbackByRatingRepository, GetCustomerFeedbackByRatingRepository>();
+            services.AddScoped<ICommandCustomerFeedbackRepository, CommandCustomerFeedbackRepository>();
+            services.AddScoped<IQueryableCustomerFeedbackRepository, QueryableCustomerFeedbackRepository>();
+
+            services.AddScoped<IAuditEventProvider, CustomerFeedbackEventProvider>();
 
             services.AddScoped<IRegisterIncidentReportRepository, RegisterIncidentReportRepository>();
             services.AddScoped<IGetAllIncidentReportsRepository, GetAllIncidentReportsRepository>();

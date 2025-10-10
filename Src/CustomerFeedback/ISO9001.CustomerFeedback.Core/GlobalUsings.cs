@@ -1,0 +1,15 @@
+global using ISO9001.CustomerFeedback.Core.Interfaces;
+global using ISO9001.Entities.Dtos;
+global using ISO9001.Entities.Responses;
+global using ISO9001.GetAllCustomerFeedback.BusinessObjects.Interfaces;
+global using ISO9001.GetCustomerFeedbackByCustomerId.BusinessObjects.Interfaces;
+global using ISO9001.GetCustomerFeedbackByEntityId.BusinessObjects.Interfaces;
+global using ISO9001.GetCustomerFeedbackByEntityId.Core.Handler;
+global using ISO9001.GetCustomerFeedbackById.BusinessObjects.Interfaces;
+global using ISO9001.GetCustomerFeedbackById.Core.Handlers;
+global using ISO9001.GetCustomerFeedbackByRating.BusinessObjects.Interfaces;
+global using ISO9001.GetCustomerFeedbackByRating.Core.Handlers;
+global using ISO9001.RegisterCustomerFeedback.BusinessObjects.Interfaces;
+global using ISO9001.RegisterCustomerFeedback.Core.Handlers;
+global using Microsoft.Extensions.DependencyInjection;
+global using ISO9001.GetAllCustomerFeedback.Core.Handlers;

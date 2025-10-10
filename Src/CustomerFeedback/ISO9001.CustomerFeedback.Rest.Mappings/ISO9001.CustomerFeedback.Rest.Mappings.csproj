@@ -1,0 +1,19 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\ISO9001.Entities\ISO9001.Entities.csproj" />
+    <ProjectReference Include="..\..\ISO9001.Helpers\ISO9001.Helpers.csproj" />
+    <ProjectReference Include="..\ISO9001.CustomerFeedback.Core\ISO9001.CustomerFeedback.Core.csproj" />
+  </ItemGroup>
+
+	<ItemGroup>
+		<FrameworkReference Include="Microsoft.AspNetCore.App" />
+	</ItemGroup>
+
+</Project>

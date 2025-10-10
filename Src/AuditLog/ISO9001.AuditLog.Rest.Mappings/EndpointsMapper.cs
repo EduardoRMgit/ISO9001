@@ -11,7 +11,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 
-namespace ISO900.AuditLog.Rest.Mappings
+namespace ISO9001.AuditLog.Rest.Mappings
 {
     public static class EndpointsMapper
     {

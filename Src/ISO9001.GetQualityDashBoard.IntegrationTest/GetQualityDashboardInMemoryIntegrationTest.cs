@@ -190,7 +190,7 @@ namespace ISO9001.GetQualityDashBoard.IntegrationTest
             #endregion
 
             #region RegisterCustomerFeedback
-            var RecentFeedback1 = new CustomerFeedback
+            var RecentFeedback1 = new Database.InMemory.DataContexts.Entities.CustomerFeedback
             {
                 Id = ++CustomerFeedbackMemoryStore.CurrentId,
                 EntityId = "Entity1",
@@ -202,7 +202,7 @@ namespace ISO9001.GetQualityDashBoard.IntegrationTest
                 CreatedAt = Now
             };
 
-            var RecentFeedback2 = new CustomerFeedback
+            var RecentFeedback2 = new Database.InMemory.DataContexts.Entities.CustomerFeedback
             {
                 Id = ++CustomerFeedbackMemoryStore.CurrentId,
                 EntityId = "Entity2",
@@ -214,7 +214,7 @@ namespace ISO9001.GetQualityDashBoard.IntegrationTest
                 CreatedAt = Now.AddDays(-5)
             };
 
-            var RecentFeedback3 = new CustomerFeedback
+            var RecentFeedback3 = new Database.InMemory.DataContexts.Entities.CustomerFeedback
             {
                 Id = ++CustomerFeedbackMemoryStore.CurrentId,
                 EntityId = "Entity3",
@@ -226,7 +226,7 @@ namespace ISO9001.GetQualityDashBoard.IntegrationTest
                 CreatedAt = Now.AddDays(-10)
             };
 
-            var RecentFeedback4 = new CustomerFeedback
+            var RecentFeedback4 = new Database.InMemory.DataContexts.Entities.CustomerFeedback
             {
                 Id = ++CustomerFeedbackMemoryStore.CurrentId,
                 EntityId = "Entity4",
@@ -238,7 +238,7 @@ namespace ISO9001.GetQualityDashBoard.IntegrationTest
                 CreatedAt = Now.AddDays(-15)
             };
 
-            var RecentFeedback5 = new CustomerFeedback
+            var RecentFeedback5 = new Database.InMemory.DataContexts.Entities.CustomerFeedback
             {
                 Id = ++CustomerFeedbackMemoryStore.CurrentId,
                 EntityId = "Entity5",
@@ -250,7 +250,7 @@ namespace ISO9001.GetQualityDashBoard.IntegrationTest
                 CreatedAt = Now.AddDays(-20)
             };
 
-            var OldFeedback1 = new CustomerFeedback
+            var OldFeedback1 = new Database.InMemory.DataContexts.Entities.CustomerFeedback
             {
                 Id = ++CustomerFeedbackMemoryStore.CurrentId,
                 EntityId = "Entity6",
@@ -262,7 +262,7 @@ namespace ISO9001.GetQualityDashBoard.IntegrationTest
                 CreatedAt = Now.AddDays(-35)
             };
 
-            var OldFeedback2 = new CustomerFeedback
+            var OldFeedback2 = new Database.InMemory.DataContexts.Entities.CustomerFeedback
             {
                 Id = ++CustomerFeedbackMemoryStore.CurrentId,
                 EntityId = "Entity7",
@@ -274,7 +274,7 @@ namespace ISO9001.GetQualityDashBoard.IntegrationTest
                 CreatedAt = Now.AddDays(-45)
             };
 
-            var OldFeedback3 = new CustomerFeedback
+            var OldFeedback3 = new Database.InMemory.DataContexts.Entities.CustomerFeedback
             {
                 Id = ++CustomerFeedbackMemoryStore.CurrentId,
                 EntityId = "Entity8",

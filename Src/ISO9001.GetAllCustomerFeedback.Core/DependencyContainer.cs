@@ -8,7 +8,7 @@ namespace ISO9001.GetAllCustomerFeedback.Core
     {
         public static IServiceCollection AddGetAllCustomerFeedbackCoreServices(this IServiceCollection services)
         {
-            services.AddScoped<IGetAllCustomerFeedbackInputPort, GetAllCustomerFeedbackHandler>();
+           
 
             return services;
         }

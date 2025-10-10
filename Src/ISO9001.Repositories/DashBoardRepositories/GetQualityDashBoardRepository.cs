@@ -1,4 +1,5 @@
-﻿using ISO9001.Entities.Responses;
+﻿using ISO9001.CustomerFeedback.Core.Interfaces;
+using ISO9001.Entities.Responses;
 using ISO9001.GetAllCustomerFeedback.BusinessObjects.Interfaces;
 using ISO9001.GetAllIncidentReports.BusinessObjects.Interfaces;
 using ISO9001.GetAllNonConformities.BusinessObjects;
@@ -8,7 +9,7 @@ using ISO9001.Repositories.NonConformityRepositories.Interfaces;
 namespace ISO9001.Repositories.DashBoardRepositories
 {
     internal class GetQualityDashBoardRepository(
-        IGetAllCustomerFeedbackRepository getAllCustomerFeedbackRepository,
+        IQueryableCustomerFeedbackRepository getAllCustomerFeedbackRepository,
         IGetAllIncidentReportsRepository getAllIncidentReportRepository,
         IGetAllNonConformitiesRepository getAllNonConformitiesRepository,
         IQueryableNonConformityDataContext nonConformityDataContext) : IGetQualityDashBoardRepository

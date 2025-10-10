@@ -7,22 +7,17 @@
 
   <ItemGroup>
     <ProjectReference Include="..\AuditLog\ISO9001.AuditLog.Core\ISO9001.AuditLog.Core.csproj" />
+    <ProjectReference Include="..\CustomerFeedback\ISO9001.CustomerFeedback.Core\ISO9001.CustomerFeedback.Core.csproj" />
     <ProjectReference Include="..\ISO9001.Entities\ISO9001.Entities.csproj" />
     <ProjectReference Include="..\ISO9001.GenerateAuditReport.BusinessObjects\ISO9001.GenerateAuditReport.BusinessObjects.csproj" />
-    <ProjectReference Include="..\ISO9001.GetAllCustomerFeedback.BusinessObjects\ISO9001.GetAllCustomerFeedback.BusinessObjects.csproj" />
     <ProjectReference Include="..\ISO9001.GetAllIncidentReports.BusinessObjects\ISO9001.GetAllIncidentReports.BusinessObjects.csproj" />
     <ProjectReference Include="..\ISO9001.GetAllNonConformities.BusinessObjects\ISO9001.GetAllNonConformities.BusinessObjects.csproj" />
-    <ProjectReference Include="..\ISO9001.GetCustomerFeedbackByCustomerId.BusinessObjects\ISO9001.GetCustomerFeedbackByCustomerId.BusinessObjects.csproj" />
-    <ProjectReference Include="..\ISO9001.GetCustomerFeedbackByEntityId.BusinessObjects\ISO9001.GetCustomerFeedbackByEntityId.BusinessObjects.csproj" />
-    <ProjectReference Include="..\ISO9001.GetCustomerFeedbackById.BusinessObjects\ISO9001.GetCustomerFeedbackById.BusinessObjects.csproj" />
-    <ProjectReference Include="..\ISO9001.GetCustomerFeedbackByRating.BusinessObjects\ISO9001.GetCustomerFeedbackByRating.BusinessObjects.csproj" />
     <ProjectReference Include="..\ISO9001.GetIncidentReportById.BusinessObjects\ISO9001.GetIncidentReportById.BusinessObjects.csproj" />
     <ProjectReference Include="..\ISO9001.GetNonConformityByAffectedProcess.BusinessObjects\ISO9001.GetNonConformityByAffectedProcess.BusinessObjects.csproj" />
     <ProjectReference Include="..\ISO9001.GetNonConformityByEntityId.BusinessObjects\ISO9001.GetNonConformityByEntityId.BusinessObjects.csproj" />
     <ProjectReference Include="..\ISO9001.GetNonConformityByStatus.BusinessObjects\ISO9001.GetNonConformityByStatus.BusinessObjects.csproj" />
     <ProjectReference Include="..\ISO9001.GetQualityDashBoard.BusinessObjects\ISO9001.GetQualityDashBoard.BusinessObjects.csproj" />
     <ProjectReference Include="..\ISO9001.Interfaces\ISO9001.Interfaces.csproj" />
-    <ProjectReference Include="..\ISO9001.RegisterCustomerFeedback.BusinessObjects\ISO9001.RegisterCustomerFeedback.BusinessObjects.csproj" />
     <ProjectReference Include="..\ISO9001.RegisterIncidentReport.BusinessObjects\ISO9001.RegisterIncidentReport.BusinessObjects.csproj" />
     <ProjectReference Include="..\ISO9001.RegisterNonConformity.BusinessObjects\ISO9001.RegisterNonConformity.BusinessObjects.csproj" />
     <ProjectReference Include="..\ISO9001.RegisterNonConformityDetail.BusinessObjects\ISO9001.RegisterNonConformityDetail.BusinessObjects.csproj" />
