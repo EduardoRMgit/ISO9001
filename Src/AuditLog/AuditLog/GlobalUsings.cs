@@ -1,0 +1,14 @@
+global using ISO9001.AuditLog.Core.Handlers.GetAllAuditLogs;
+global using ISO9001.AuditLog.Core.Handlers.GetAuditLogByEntityId;
+global using ISO9001.AuditLog.Core.Handlers.GetAuditLogById;
+global using ISO9001.AuditLog.Core.Handlers.GetAuditLogsByAction;
+global using ISO9001.AuditLog.Core.Handlers.RegisterAuditLog;
+global using ISO9001.AuditLog.Core.Interfaces;
+global using ISO9001.AuditLog.Core.Internals.GetAllAuditLogs;
+global using ISO9001.AuditLog.Core.Internals.GetAuditLogById;
+global using ISO9001.AuditLog.Core.Internals.GetAuditLogsByAction;
+global using ISO9001.AuditLog.Core.Internals.GetAuditLogsByEntityId;
+global using ISO9001.AuditLog.Core.Internals.RegisterAuditLog;
+global using ISO9001.Entities.Dtos;
+global using ISO9001.Entities.Responses;
+global using Microsoft.Extensions.DependencyInjection;

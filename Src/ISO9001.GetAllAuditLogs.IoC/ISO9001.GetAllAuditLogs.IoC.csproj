@@ -9,8 +9,4 @@
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.8" />
   </ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\ISO9001.GetAllAuditLogsCore\ISO9001.GetAllAuditLogsCore.csproj" />
-  </ItemGroup>
-
 </Project>

@@ -1,11 +1,8 @@
-﻿using ISO9001.GenerateAuditReport.BusinessObjects.Interfaces;
-using ISO9001.GetAllAuditLogs.BusinessObjects.Interfaces;
+﻿using ISO9001.AuditLog.Core.Interfaces;
+using ISO9001.GenerateAuditReport.BusinessObjects.Interfaces;
 using ISO9001.GetAllCustomerFeedback.BusinessObjects.Interfaces;
 using ISO9001.GetAllIncidentReports.BusinessObjects.Interfaces;
 using ISO9001.GetAllNonConformities.BusinessObjects;
-using ISO9001.GetAuditLogById.BusinessObjects.Interfaces;
-using ISO9001.GetAuditLogsByAction.BusinessObjects.Interfaces;
-using ISO9001.GetAuditLogsByEntityIdBusinessObjects.Interfaces;
 using ISO9001.GetCustomerFeedbackByCustomerId.BusinessObjects.Interfaces;
 using ISO9001.GetCustomerFeedbackByEntityId.BusinessObjects.Interfaces;
 using ISO9001.GetCustomerFeedbackById.BusinessObjects.Interfaces;
@@ -16,7 +13,6 @@ using ISO9001.GetNonConformityByEntityId.BusinessObjects;
 using ISO9001.GetNonConformityByStatus.BusinessObjects;
 using ISO9001.GetQualityDashBoard.BusinessObjects.Interfaces;
 using ISO9001.Interfaces.Interfaces;
-using ISO9001.RegisterAuditLog.BusinessObjects.Interfaces;
 using ISO9001.RegisterCustomerFeedback.BusinessObjects.Interfaces;
 using ISO9001.RegisterIncidentReport.BusinessObjects.Interfaces;
 using ISO9001.RegisterNonConformity.BusinessObjects.Interfaces;
@@ -39,11 +35,8 @@ namespace ISO9001.Repositories
     {
         public static IServiceCollection AddISO9001Repositories(this IServiceCollection services)
         {
-            services.AddScoped<IRegisterAuditLogRepository, RegisterAuditLogRepository>();
-            services.AddScoped<IGetAllAuditLogsRepository, GetAllAuditLogsRepository>();
-            services.AddScoped<IGetAuditLogsByEntityIdRepository, GetAuditLogsByEntityIdRepository>();
-            services.AddScoped<IGetAuditLogsByActionRepository, GetAuditLogsByActionRepository>();
-            services.AddScoped<IGetAuditLogByIdRepository, GetAuditLogByIdRepository>();
+            services.AddScoped<ICommandAuditLogRepository, CommandAuditLogRepository>();
+            services.AddScoped<IQueryableAuditLogRepository, QueryableAuditLogRepository>();
 
             services.AddScoped<IRegisterCustomerFeedbackRepository, RegisterCustomerFeedbackRepository>();
             services.AddScoped<IGetAllCustomerFeedbackRepository, GetAllCustomerFeedbackRepository>();
