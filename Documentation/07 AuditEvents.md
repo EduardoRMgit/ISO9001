@@ -14,7 +14,7 @@ Este endpoint permite obtener el panel de auditoria desde un cliente HTTP.
 ```csharp
 public static class EndpointsMapper
 {
-    public static IEndpointRouteBuilder MapGetAuditEventsEndpoint(
+    public static IEndpointRouteBuilder MapAuditEventEndpoints(
         this IEndpointRouteBuilder builder)
     {
         builder.MapGet("{companyId}/".CreateEndpoint("AuditEventEndpoints"), async (
@@ -52,22 +52,23 @@ La respuesta es una colección de objetos AuditEventResponse. Cada objeto indica
 ## Repositorio: IGetAuditEventsRepository
 
 ```csharp
-public interface IGetAuditEventsRepository
+public interface IQueryableAuditEventRepository
 {
     Task<IEnumerable<AuditEventResponse>> GetAuditEventsAsync(string entityId, string companyId);
+
 }
 ```
 
 ### Implementación del Repositorio.
 Se utiliza un patrón de proveedores de eventos de auditoría (IAuditEventProvider). Cada tipo de evento implementa su propio proveedor, y el repositorio central los unifica.
 ```csharp
-internal class GetAuditEventsRepository(IEnumerable<IAuditEventProvider> providers) : IGetAuditEventsRepository
+internal class QueryableAuditEventRepository(IEnumerable<IAuditEventProvider> providers) : IQueryableAuditEventRepository
 {
-    public async Task<IEnumerable<AuditEventResponse>> GetAuditEventsAsync(string entityId,string companyId)
+    public async Task<IEnumerable<AuditEventResponse>> GetAuditEventsAsync(string entityId, string companyId)
     {
         List<AuditEventResponse> AllAuditEvents = [];
 
-        foreach(IAuditEventProvider provider in providers)
+        foreach (IAuditEventProvider provider in providers)
         {
             var AuditEvents = await provider.GetAuditEventsAsync(entityId, companyId);
 
@@ -75,6 +76,7 @@ internal class GetAuditEventsRepository(IEnumerable<IAuditEventProvider> provide
         }
 
         return AllAuditEvents;
+
     }
 }
 ```
@@ -202,10 +204,11 @@ public interface IGetAuditEventsInputPort
 ### Implementación del Caso de uso.
 
 ```csharp
-internal class GetAuditEventsHandler(IGetAuditEventsRepository repository) : IGetAuditEventsInputPort
+internal class GetAuditEventsHandler(IQueryableAuditEventRepository repository) : IGetAuditEventsInputPort
 {
     public async Task<IEnumerable<AuditEventResponse>> HandleAsync(string entityId, string companyId)
     {
+
         return await repository.GetAuditEventsAsync(entityId, companyId);
     }
 }

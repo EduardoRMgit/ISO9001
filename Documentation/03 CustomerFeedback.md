@@ -30,6 +30,173 @@ public class CustomerFeedback()
     public DateTime ReportedAt { get; set; }
 }
 ```
+## Repository: Interfaces
+En esta sección se definen las interfaces que se utilizarán en los repositorios de los casos de uso de la entidad CustomerFeedback. Siguiendo el patrón CQRS, se separan las operaciones de lectura y escritura en dos interfaces diferentes.
+
+### ICommandCustomerFeedbackRepository
+La interfaz ICommandCustomerFeedbackRepository se encarga únicamente de agregar y guardar registros CustomerFeedback.
+
+```csharp
+public interface ICommandCustomerFeedbackRepository
+{
+    Task RegisterCustomerFeedbackAsync(CustomerFeedbackDto customerFeedbackDto);
+    Task SaveChangesAsync();
+
+}
+```
+
+### IQueryableCustomerFeedbackRepository
+La interfaz IQueryableCustomerFeedbackRepository está dedicada a las operaciones de consulta.
+
+```csharp
+public interface IQueryableCustomerFeedbackRepository
+{
+    Task<IEnumerable<CustomerFeedbackResponse>> GetCustomerFeedbackByRatingAsync(string id, int rating, DateTime? from, DateTime? end);
+
+    Task<CustomerFeedbackResponse> GetCustomerFeedbackByIdAsync(string companyId, int id);
+
+    Task<bool> CustomerFeedbackExists(string companyId, int id);
+
+    Task<IEnumerable<CustomerFeedbackResponse>> GetCustomerFeedbackByEntityId(string id, string entityId);
+
+    Task<IEnumerable<CustomerFeedbackResponse>> GetCustomerFeedbackByCustomerIdAsync(string id, string customerId, DateTime? from, DateTime? end);
+
+    Task<IEnumerable<CustomerFeedbackResponse>> GetAllCustomerFeedbacksAsync(string id, DateTime? from, DateTime? end);
+}
+```
+
+## Implementación de los repositorios.
+
+### CommandCustomerFeedbackRepository
+```csharp
+internal class CommandCustomerFeedbackRepository(
+    IWritableCustomerFeedbackDataContext dataContext) : ICommandCustomerFeedbackRepository
+{
+    public async Task RegisterCustomerFeedbackAsync(CustomerFeedbackDto customerFeedbackDto)
+    {
+        var NewCustomerFeedback = new Entities.CustomerFeedback
+        {
+            EntityId = customerFeedbackDto.EntityId,
+            CompanyId = customerFeedbackDto.CompanyId,
+            CustomerId = customerFeedbackDto.CustomerId,
+            Rating = customerFeedbackDto.Rating,
+            Comments = customerFeedbackDto.Comments,
+            ReportedAt = customerFeedbackDto.ReportedAt
+        };
+
+        await dataContext.AddAsync(NewCustomerFeedback);
+    }
+
+    public async Task SaveChangesAsync()
+    {
+        await dataContext.SaveChangesAsync();
+    }
+}
+```
+
+### QueryableCustomerFeedbackRepository
+```csharp
+internal class QueryableCustomerFeedbackRepository(IQueryableCustomerFeedbackDataContext dataContext) : IQueryableCustomerFeedbackRepository
+{
+    public async Task<IEnumerable<CustomerFeedbackResponse>> GetAllCustomerFeedbacksAsync(
+        string id, DateTime? from, DateTime? end)
+    {
+        IQueryable<CustomerFeedbackReadModel> Query = dataContext.CustomerFeedbacks
+            .Where(CustomerFeedback => CustomerFeedback.CompanyId == id &&
+                CustomerFeedback.ReportedAt >= from &&
+                CustomerFeedback.ReportedAt <= end);
+
+        var CustomerFeedbacks = await dataContext.ToListAsync(Query);
+
+        return CustomerFeedbacks.Select(CustomerFeedback =>
+        new CustomerFeedbackResponse(
+            CustomerFeedback.EntityId,
+            CustomerFeedback.CustomerId,
+            CustomerFeedback.Rating,
+            CustomerFeedback.ReportedAt));
+    }
+
+    public async Task<IEnumerable<CustomerFeedbackResponse>> GetCustomerFeedbackByCustomerIdAsync
+    (string id, string customerId, DateTime? from, DateTime? end)
+    {
+        IQueryable<CustomerFeedbackReadModel> Query = dataContext.CustomerFeedbacks
+            .Where(CustomerFeedback => CustomerFeedback.CompanyId == id &&
+            CustomerFeedback.CustomerId == customerId &&
+            CustomerFeedback.ReportedAt >= from &&
+            CustomerFeedback.ReportedAt <= end);
+
+        var CustomerFeedbacks = await dataContext.ToListAsync(Query);
+
+        return CustomerFeedbacks.Select(CustomerFeedback =>
+        new CustomerFeedbackResponse(
+            CustomerFeedback.EntityId,
+            CustomerFeedback.CustomerId,
+            CustomerFeedback.Rating,
+            CustomerFeedback.ReportedAt));
+
+    }
+
+    public async Task<IEnumerable<CustomerFeedbackResponse>> GetCustomerFeedbackByEntityId(string id, string entityId)
+    {
+        IQueryable<CustomerFeedbackReadModel> Query =
+            dataContext.CustomerFeedbacks.Where(CustomerFeedback => CustomerFeedback.CompanyId == id &&
+            CustomerFeedback.EntityId == entityId);
+
+        var CustomerFeedbacks = await dataContext.ToListAsync(Query);
+
+        return CustomerFeedbacks.Select(CustomerFeedback =>
+        new CustomerFeedbackResponse(
+            CustomerFeedback.EntityId,
+            CustomerFeedback.CustomerId,
+            CustomerFeedback.Rating,
+            CustomerFeedback.ReportedAt));
+    }
+
+    public Task<bool> CustomerFeedbackExists(string companyId, int id)
+    {
+        var CustomerFeedback = dataContext.CustomerFeedbacks
+            .FirstOrDefault(CustomerFeedback => CustomerFeedback.CompanyId == companyId &&
+            CustomerFeedback.Id == id);
+
+        return Task.FromResult(CustomerFeedback != null);
+    }
+
+    public Task<CustomerFeedbackResponse> GetCustomerFeedbackByIdAsync(string companyId, int id)
+    {
+        var CustomerFeedback = dataContext.CustomerFeedbacks
+            .FirstOrDefault(CustomerFeedback => CustomerFeedback.CompanyId == companyId &&
+            CustomerFeedback.Id == id);
+
+        return Task.FromResult(new CustomerFeedbackResponse(
+            CustomerFeedback.EntityId,
+            CustomerFeedback.CustomerId,
+            CustomerFeedback.Rating,
+            CustomerFeedback.ReportedAt));
+    }
+
+    public async Task<IEnumerable<CustomerFeedbackResponse>> GetCustomerFeedbackByRatingAsync(string id, int rating, DateTime? from, DateTime? end)
+    {
+
+        IQueryable<CustomerFeedbackReadModel> Query = dataContext.CustomerFeedbacks
+            .Where(CustomerFeedback => CustomerFeedback.CompanyId == id &&
+            CustomerFeedback.Rating == rating &&
+            CustomerFeedback.ReportedAt >= from &&
+            CustomerFeedback.ReportedAt <= end);
+
+        var CustomerFeedbacks = await dataContext.ToListAsync(Query);
+
+        return CustomerFeedbacks.Select(CustomerFeedback =>
+        new CustomerFeedbackResponse(
+            CustomerFeedback.EntityId,
+            CustomerFeedback.CustomerId,
+            CustomerFeedback.Rating,
+            CustomerFeedback.ReportedAt));
+
+    }
+}
+```
+
+
 
 ## DataContext: Interfaces
 
@@ -42,7 +209,7 @@ La interfaz IWritableCustomerFeedbackDataContext se encarga exclusivamente de ag
 ```csharp
 public interface IWritableCustomerFeedbackDataContext
 {
-    Task AddAsync(CustomerFeedback customerFeedback);
+    Task AddAsync(Entities.CustomerFeedback customerFeedback);
     Task SaveChangesAsync();
 }
 ```
@@ -68,7 +235,7 @@ Puedes implementar ambos contextos de datos utilizando un sistema de base de dat
 ```csharp
 internal class InMemoryCustomerFeedbackStore
 {
-    public List<CustomerFeedback> CustomerFeedbacks { get; } = new();
+    public List<Entities.AuditLog> AuditLogs { get; } = new();
     public int CurrentId { get; set; }
 }
 ```
@@ -80,9 +247,9 @@ internal class InMemoryCustomerFeedbackStore
 internal class InMemoryWritableCustomerFeedbackDataContext(
     InMemoryCustomerFeedbackStore dataContext) : IWritableCustomerFeedbackDataContext
 {
-    public Task AddAsync(CustomerFeedback customerFeedback)
+    public Task AddAsync(Repositories.AuditLogRepositories.Entities.AuditLog auditLog)
     {
-        var Record = new Entities.CustomerFeedback
+        var Record = new DataContexts.Entities.AuditLog
         {
             Id = ++dataContext.CurrentId,
             EntityId = customerFeedback.EntityId,
@@ -142,7 +309,7 @@ Este endpoint permite registrar CustomerFeedback desde un cliente HTTP.
 ```csharp
 public static class EndpointsMapper
 {
-    public static IEndpointRouteBuilder MapRegisterCustomerFeedbackEndpoint(
+    public static IEndpointRouteBuilder MapCustomerFeedbackEndpoints(
         this IEndpointRouteBuilder builder)
     {
         builder.MapPost("".CreateEndpoint("CustomerFeedbackEndpoints"),
@@ -158,7 +325,6 @@ public static class EndpointsMapper
                     ));
                 return TypedResults.Created();
             });
-        return builder;
     }
 }
 ```
@@ -189,44 +355,6 @@ public class CustomerFeedbackRequest
     public DateTime ReportedAt { get; set; }
 }
 ```
-## Repositorio: IRegisterCustomerFeedbackRepository
-
-```csharp
-public interface IRegisterCustomerFeedbackRepository
-{
-    Task RegisterCustomerFeedbackAsync(CustomerFeedbackDto customerFeedbackDto);
-    Task SaveChangesAsync();
-}
-```
-
-### Implementación del Repositorio.
-
-```csharp
-internal class RegisterCustomerFeedbackRepository(
-    IWritableCustomerFeedbackDataContext dataContext) : IRegisterCustomerFeedbackRepository
-{
-    public async Task RegisterCustomerFeedbackAsync(CustomerFeedbackDto customerFeedbackDto)
-    {
-        var NewCustomerFeedback = new CustomerFeedback
-        {
-            EntityId = customerFeedbackDto.EntityId,
-            CompanyId = customerFeedbackDto.CompanyId,
-            CustomerId = customerFeedbackDto.CustomerId,
-            Rating = customerFeedbackDto.Rating,
-            Comments = customerFeedbackDto.Comments,
-            ReportedAt = customerFeedbackDto.ReportedAt
-        };
-
-        await dataContext.AddAsync(NewCustomerFeedback);
-    }
-
-    public async Task SaveChangesAsync()
-    {
-        await dataContext.SaveChangesAsync();
-    }
-}
-```
-
 ## Caso de uso: IRegisterCustomerFeedbackInputPort
 
 ```csharp
@@ -302,21 +430,16 @@ Este endpoint permite obtener los registros de satisfacción desde un cliente HT
 ```csharp
 public static class EndpointsMapper
 {
-    public static IEndpointRouteBuilder MapGetAllCustomerFeedbackEndpoints(
-        this IEndpointRouteBuilder builder)
-    {
-        builder.MapGet("{companyId}/".CreateEndpoint("CustomerFeedbackEndpoints"), async (
-            string companyId,
-            [FromQuery] DateTime? from,
-            [FromQuery] DateTime? end,
-            IGetAllCustomerFeedbackInputPort inputPort) =>
-        {
-            var result = await inputPort.HandleAsync(companyId, from, end);
-            return TypedResults.Ok(result);
+    builder.MapGet("{companyId}/".CreateEndpoint("CustomerFeedbackEndpoints"), async (
+    string companyId,
+    [FromQuery] DateTime? from,
+    [FromQuery] DateTime? end,
+    IGetAllCustomerFeedbackInputPort inputPort) =>
+            {
+                var result = await inputPort.HandleAsync(companyId, from, end);
+                return TypedResults.Ok(result);
 
-        });
-        return builder;
-    }
+            });
 }
 ```
 ### Reponse: CustomerFeedbackResponse
@@ -328,40 +451,6 @@ public class CustomerFeedbackResponse(string entityId, string customerId, int ra
     public string CustomerId => customerId;
     public int Rating => rating;
     public DateTime ReportedAt => reportedAt;
-}
-```
-
-
-## Repositorio: IGetAllCustomerFeedbackRepository
-
-```csharp
-public interface IGetAllCustomerFeedbackRepository
-{
-    Task<IEnumerable<CustomerFeedbackResponse>> GetAllCustomerFeedbacksAsync(string id, DateTime? from, DateTime? end);
-}
-```
-
-### Implementación del Repositorio.
-```csharp
-internal class GetAllCustomerFeedbackRepository(IQueryableCustomerFeedbackDataContext dataContext): IGetAllCustomerFeedbackRepository
-{
-    public async Task<IEnumerable<CustomerFeedbackResponse>> GetAllCustomerFeedbacksAsync(
-        string id, DateTime? from, DateTime? end)
-    {
-        IQueryable<CustomerFeedbackReadModel> Query = dataContext.CustomerFeedbacks
-            .Where(CustomerFeedback => CustomerFeedback.CompanyId == id &&
-                CustomerFeedback.ReportedAt >= from &&
-                CustomerFeedback.ReportedAt <= end);
-
-        var CustomerFeedbacks = await dataContext.ToListAsync(Query);
-
-        return CustomerFeedbacks.Select(CustomerFeedback =>
-        new CustomerFeedbackResponse(
-            CustomerFeedback.EntityId,
-            CustomerFeedback.CustomerId,
-            CustomerFeedback.Rating,
-            CustomerFeedback.ReportedAt));
-    }
 }
 ```
 
@@ -436,27 +525,25 @@ Este caso de uso permite obtener todos los registros de satisfacción (CustomerF
 
 
 ## Endpoint REST
-Este endpoint permite obtener los logs desde un cliente HTTP.
+Este endpoint permite obtener los registros de satisfacción desde un cliente HTTP.
 
 ```csharp
 public static class EndpointsMapper
 {
-    public static IEndpointRouteBuilder MapGetCustomerFeedbackByCustomerIdEndpoint(
+    public static IEndpointRouteBuilder MapCustomerFeedbackEndpoints(
         this IEndpointRouteBuilder builder)
     {
-        builder.MapGet(("{companyId}/" + GetCustomerFeedbackByCustomerIdEndpoint.Customer + "/{customerId}").CreateEndpoint("CustomerFeedbackEndpoints"), async (
-            string companyId,
-            string customerId,
-            [FromQuery] DateTime? from,
-            [FromQuery] DateTime? end,
-            IGetCustomerFeedbackByCustomerIdInputPort inputPort) =>
-        {
-            var result = await inputPort.HandleAsync(companyId, customerId, from, end);
-            return TypedResults.Ok(result);
+        builder.MapGet(("{companyId}/" + "Customer" + "/{customerId}").CreateEndpoint("CustomerFeedbackEndpoints"), async (
+        string companyId,
+        string customerId,
+        [FromQuery] DateTime? from,
+        [FromQuery] DateTime? end,
+        [FromServices] IGetCustomerFeedbackByCustomerIdInputPort inputPort) =>
+                {
+                    var result = await inputPort.HandleAsync(companyId, customerId, from, end);
+                    return TypedResults.Ok(result);
 
-        });
-
-        return builder;
+                });
     }
 }
 ```
@@ -469,43 +556,6 @@ public class CustomerFeedbackResponse(string entityId, string customerId, int ra
     public string CustomerId => customerId;
     public int Rating => rating;
     public DateTime ReportedAt => reportedAt;
-}
-```
-
-
-## Repositorio: IGetCustomerFeedbackByCustomerIdRepository
-
-```csharp
-public interface IGetCustomerFeedbackByCustomerIdRepository
-{
-    Task<IEnumerable<CustomerFeedbackResponse>> GetCustomerFeedbackByCustomerIdAsync(string id, string customerId, DateTime? from, DateTime? end);
-}
-```
-
-### Implementación del Repositorio.
-```csharp
-internal class GetCustomerFeedbackByCustomerIdRepository
-    (IQueryableCustomerFeedbackDataContext dataContext): IGetCustomerFeedbackByCustomerIdRepository
-{
-    public async Task<IEnumerable<CustomerFeedbackResponse>> GetCustomerFeedbackByCustomerIdAsync
-        (string id, string customerId, DateTime? from, DateTime? end)
-    {
-        IQueryable<CustomerFeedbackReadModel> Query = dataContext.CustomerFeedbacks
-            .Where(CustomerFeedback => CustomerFeedback.CompanyId == id &&
-            CustomerFeedback.CustomerId == customerId &&
-            CustomerFeedback.ReportedAt >= from &&
-            CustomerFeedback.ReportedAt <= end);
-
-        var CustomerFeedbacks = await dataContext.ToListAsync(Query);
-
-        return CustomerFeedbacks.Select(CustomerFeedback =>
-        new CustomerFeedbackResponse(
-            CustomerFeedback.EntityId,
-            CustomerFeedback.CustomerId,
-            CustomerFeedback.Rating,
-            CustomerFeedback.ReportedAt));
-
-    }
 }
 ```
 
@@ -576,25 +626,24 @@ Este caso de uso permite obtener todos los registros de satisfacción (CustomerF
 - entityId (obligatorio): Identificador de la entidad cuyos registros de satisfacción se desean consultar.
 
 ## Endpoint REST
-Este endpoint permite obtener los logs desde un cliente HTTP.
+Este endpoint permite obtener los registros de satisfacción desde un cliente HTTP.
 
 ```csharp
 public static class EndpointsMapper
 {
-    public static IEndpointRouteBuilder MapGetCustomerFeedbackByEntityIdEndpoint(
+    public static IEndpointRouteBuilder MapCustomerFeedbackEndpoints(
         this IEndpointRouteBuilder builder)
     {
-        builder.MapGet(("{companyId}/" + GetCustomerFeedbackByEntityIdEndpoint.Entity + "/{entityId}").CreateEndpoint("CustomerFeedbackEndpoints"), async (
-            string companyId,
-            string entityId,
-            IGetCustomerFeedbackByEntityIdInputPort inputPort) =>
-        {
-            var result = await inputPort.HandleAsync(companyId, entityId);
-            return TypedResults.Ok(result);
+        builder.MapGet(("{companyId}/" + "Entity" + "/{entityId}").CreateEndpoint("CustomerFeedbackEndpoints"), async (
+        string companyId,
+        string entityId,
+        IGetCustomerFeedbackByEntityIdInputPort inputPort) =>
+                {
+                    var result = await inputPort.HandleAsync(companyId, entityId);
+                    return TypedResults.Ok(result);
 
-        });
+                });
 
-        return builder;
     }
 }
 ```
@@ -607,40 +656,6 @@ public class CustomerFeedbackResponse(string entityId, string customerId, int ra
     public string CustomerId => customerId;
     public int Rating => rating;
     public DateTime ReportedAt => reportedAt;
-}
-```
-
-
-## Repositorio: IGetCustomerFeedbackByEntityIdRepository
-
-```csharp
-public interface IGetCustomerFeedbackByEntityIdRepository
-{
-    Task<IEnumerable<CustomerFeedbackResponse>> GetCustomerFeedbackByEntityId(string id, string entityId);
-}
-```
-
-### Implementación del Repositorio.
-
-```csharp
-internal class GetCustomerFeedbackByEntityIdRepository
-    (IQueryableCustomerFeedbackDataContext dataContext) : IGetCustomerFeedbackByEntityIdRepository
-{
-    public async Task<IEnumerable<CustomerFeedbackResponse>> GetCustomerFeedbackByEntityId(string id, string entityId)
-    {
-        IQueryable<CustomerFeedbackReadModel> Query = 
-            dataContext.CustomerFeedbacks.Where(CustomerFeedback => CustomerFeedback.CompanyId == id &&
-            CustomerFeedback.EntityId == entityId);
-
-        var CustomerFeedbacks = await dataContext.ToListAsync(Query);
-
-        return CustomerFeedbacks.Select(CustomerFeedback =>
-        new CustomerFeedbackResponse(
-            CustomerFeedback.EntityId,
-            CustomerFeedback.CustomerId,
-            CustomerFeedback.Rating,
-            CustomerFeedback.ReportedAt));
-    }
 }
 ```
 
@@ -696,39 +711,31 @@ Después de realizar un pedido, en el componente Blazor, podemos mostrar el mens
 }
 ```
 
-# Caso de uso: GetCustomerFeedbackByRating
-Este caso de uso permite obtener todos los registros de satisfacción (CustomerFeedback) dentro de una compañía que coincidan con una rating en especifico (1-5), en un rango de fechas determinado.
+# Caso de uso: GetCustomerFeedbackById
+Este caso de uso permite obtener un registro(CustomerFeedback) a partir de un companyId y Id.
+
 
 ## Parametros de entrada.
 - companyId (obligatorio): Identificador de la empresa cuyos registros se desean consultar.
-- rating (obligatorio): Valor numérico de la calificación por la cual se filtrarán los registros (1-5);
-- from (opcional): Fecha de inicio del rango. Si no se especifica, se toma como valor predeterminado 30 días antes del día actual.
-- end (opcional): Fecha de fin del rango. Si no se especifica, se toma como valor predeterminado el final del día actual.
-
+- id (obligatorio): Identificador de la entidad c.
 
 ## Endpoint REST
-Este endpoint permite obtener los logs desde un cliente HTTP.
+Este endpoint permite obtener el correspondiente CustomerFeedback desde un cliente HTTP.
 
 ```csharp
 public static class EndpointsMapper
 {
-    public static IEndpointRouteBuilder MapGetCustomerFeedbackByRatingEndpoint(
+    public static IEndpointRouteBuilder MapCustomerFeedbackEndpoints(
         this IEndpointRouteBuilder builder)
     {
-        builder.MapGet(("{companyId}/" + GetCustomerFeedbackByRatingEndpoint.Rating + "/{rating}").CreateEndpoint("CustomerFeedbackEndpoints"), async (
-            string companyId,
-            int rating,
-            [FromQuery] DateTime? from,
-            [FromQuery] DateTime? end,
-            IGetCustomerFeedbackByRatingInputPort inputPort) =>
-        {
-            var result = await inputPort.HandleAsync(companyId, rating, from, end);
-            return TypedResults.Ok(result);
-
-        });
-
-        return builder;
-
+        builder.MapGet(("{companyId}/" + "Id" + "/{id}").CreateEndpoint("CustomerFeedbackEndpoints"), async (
+        string companyId,
+        int id,
+        IGetCustomerFeedbackByIdInputPort inputport) =>
+                {
+                    var Result = await inputport.HandleAsync(companyId, id);
+                    return TypedResults.Ok(Result);
+                });
     }
 }
 ```
@@ -744,42 +751,112 @@ public class CustomerFeedbackResponse(string entityId, string customerId, int ra
 }
 ```
 
-
-## Repositorio: IGetCustomerFeedbackByRatingRepository
+## Caso de uso: IGetCustomerFeedbackByIdInputPort
 
 ```csharp
-public interface IGetCustomerFeedbackByRatingRepository
+public interface IGetCustomerFeedbackByIdInputPort
 {
-    Task<IEnumerable<CustomerFeedbackResponse>> GetCustomerFeedbackByRatingAsync(string id, int  rating, DateTime? from, DateTime? end);
+    Task<CustomerFeedbackResponse> HandleAsync(string companyId, int id);
 }
 ```
 
-### Implementación del Repositorio.
+### Implementación del Caso de uso.
 
 ```csharp
-internal class GetCustomerFeedbackByRatingRepository(IQueryableCustomerFeedbackDataContext dataContext) : IGetCustomerFeedbackByRatingRepository
+internal class GetCustomerFeedbackByIdHandler
+    (IQueryableCustomerFeedbackRepository repository) : IGetCustomerFeedbackByIdInputPort
 {
-    public async Task<IEnumerable<CustomerFeedbackResponse>> GetCustomerFeedbackByRatingAsync(string id, int rating, DateTime? from, DateTime? end)
+    public async Task<CustomerFeedbackResponse> HandleAsync(string companyId, int id)
     {
+        var CustomerFeedbackExists = await repository.CustomerFeedbackExists(companyId, id);
 
-        IQueryable<CustomerFeedbackReadModel> Query = dataContext.CustomerFeedbacks
-            .Where(CustomerFeedback => CustomerFeedback.CompanyId == id &&
-            CustomerFeedback.Rating == rating &&
-            CustomerFeedback.ReportedAt >= from &&
-            CustomerFeedback.ReportedAt <= end);
+        if (!CustomerFeedbackExists)
+        {
+            throw new KeyNotFoundException($"CustomerFeedback with Id '{id}' doesn't exist in the company: '{companyId}'");
+        }
+        else
+        {
+            return await repository.GetCustomerFeedbackByIdAsync(companyId, id);
+        }
 
-        var CustomerFeedbacks = await dataContext.ToListAsync(Query);
-
-        return CustomerFeedbacks.Select(CustomerFeedback =>
-        new CustomerFeedbackResponse(
-            CustomerFeedback.EntityId,
-            CustomerFeedback.CustomerId,
-            CustomerFeedback.Rating,
-            CustomerFeedback.ReportedAt));
     }
 }
 ```
 
+# Integración en Blazor WebAssembly (UI)
+
+Después de realizar un pedido, en el componente Blazor, podemos mostrar el mensaje de éxito, y si se ha guardado el log correctamente.
+
+```razor
+@page "/place-order"
+@inject PlaceOrderVM ViewModel
+
+<h3>Place Order</h3>
+
+<!-- Formulario de pedido aquí -->
+
+<button class="button is-primary" @onclick="PlaceOrder">Place Order</button>
+
+@if (ViewModel.Result != null)
+{
+    <div class="notification is-success">
+        <p>Order placed successfully!</p>
+        <p>Order ID: @ViewModel.Result.OrderId</p>
+    </div>
+}
+
+@code {
+    private async Task PlaceOrder()
+    {
+        await ViewModel.PlaceOrderAsync();
+    }
+}
+```
+
+# Caso de uso: GetCustomerFeedbackByRating
+Este caso de uso permite obtener todos los registros de satisfacción (CustomerFeedback) dentro de una compañía que coincidan con una rating en especifico (1-5), en un rango de fechas determinado.
+
+## Parametros de entrada.
+- companyId (obligatorio): Identificador de la empresa cuyos registros se desean consultar.
+- rating (obligatorio): Valor numérico de la calificación por la cual se filtrarán los registros (1-5);
+- from (opcional): Fecha de inicio del rango. Si no se especifica, se toma como valor predeterminado 30 días antes del día actual.
+- end (opcional): Fecha de fin del rango. Si no se especifica, se toma como valor predeterminado el final del día actual.
+
+
+## Endpoint REST
+Este endpoint permite obtener los registros de satisfacción desde un cliente HTTP.
+
+```csharp
+public static class EndpointsMapper
+{
+    public static IEndpointRouteBuilder MapCustomerFeedbackEndpoints(
+        this IEndpointRouteBuilder builder)
+    {
+        builder.MapGet(("{companyId}/" + "Rating" + "/{rating}").CreateEndpoint("CustomerFeedbackEndpoints"), async (
+        string companyId,
+        int rating,
+        [FromQuery] DateTime? from,
+        [FromQuery] DateTime? end,
+        IGetCustomerFeedbackByRatingInputPort inputPort) =>
+                {
+                    var result = await inputPort.HandleAsync(companyId, rating, from, end);
+                    return TypedResults.Ok(result);
+
+                });
+    }
+}
+```
+### Reponse: CustomerFeedbackResponse
+
+```csharp
+public class CustomerFeedbackResponse(string entityId, string customerId, int rating, DateTime reportedAt)
+{
+    public string EntityId => entityId;
+    public string CustomerId => customerId;
+    public int Rating => rating;
+    public DateTime ReportedAt => reportedAt;
+}
+```
 ## Caso de uso: IGetCustomerFeedbackByRatingInputPort
 
 ```csharp

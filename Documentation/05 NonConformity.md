@@ -54,7 +54,241 @@ public class NonConformityDetail
     public DateTime ReportedAt { get; set; }
 }
 ```
+## Repository: Interfaces
+En esta sección se definen las interfaces que se utilizarán en los repositorios de los casos de uso de la entidad NonConformity. Siguiendo el patrón CQRS, se separan las operaciones de lectura y escritura en dos interfaces diferentes.
 
+### ICommandNonConformityRepository
+La interfaz ICommandNonConformityRepository se encarga únicamente de agregar y guardar registros NonConformity.
+
+```csharp
+public interface ICommandNonConformityRepository
+{
+    Task RegisterNonConformityAsync(NonConformityDto nonConformityDto);
+    Task UpdateStatusNonConformityMasterAsync(Guid entityId, string status);
+    Task SaveChangesAsync();
+}
+```
+
+### ICommandNonConformityDetailRepository
+La interfaz ICommandNonConformityDetailRepository se encarga únicamente de agregar y guardar registros NonConformityDetail.
+
+```csharp
+public interface ICommandNonConformityDetailRepository
+{
+    Task RegisterNonConformityDetailAsync(NonConformityCreateDetailDto nonConformityDetail);
+    Task SaveChangesAsync();
+}
+```
+
+### IQueryableNonConformityRepository
+La interfaz IQueryableNonConformityRepository está dedicada a las operaciones de consulta.
+
+```csharp
+public interface IQueryableNonConformityRepository
+{
+    Task<IEnumerable<NonConformityMaterResponse>> GetAllNonConformitiesAsync(string id, DateTime? from, DateTime? end);
+    Task<IEnumerable<NonConformityMaterResponse>> GetNonConformityByAffectedProcesssAsync(string id, string affectedProcess, DateTime? from, DateTime? end);
+    Task<IEnumerable<NonConformityResponse>> GetNonConformityByEntityIdAsync(string id, string entityId, DateTime? from, DateTime? end);
+    Task<IEnumerable<NonConformityMaterResponse>> GetNonConformityByStatusAsync(string id, string status, DateTime? from, DateTime? end);
+    Task<bool> NonConformityExistsByGuidAsync(Guid entityId);
+}
+```
+
+## Implementación de los repositorios.
+
+### CommandNonConformityRepository
+```csharp
+internal class CommandNonConformityRepository(
+    IWritableNonConformityDataContext commandDataContext,
+    IQueryableNonConformityDataContext queryDataContext) : ICommandNonConformityRepository
+{
+    public async Task RegisterNonConformityAsync(NonConformityDto nonConformityDto)
+    {
+        Entities.NonConformity NewNonConformityMaster = new Entities.NonConformity
+        {
+            Id = Guid.NewGuid(),
+            ReportedAt = nonConformityDto.ReportedAt,
+            CompanyId = nonConformityDto.CompanyId,
+            EntityId = nonConformityDto.EntityId,
+            AffectedProcess = nonConformityDto.AffectedProcess,
+            Cause = nonConformityDto.Cause,
+            Status = nonConformityDto.Status.ToLower(),
+            NonConformityDetails = new List<NonConformityDetail>()
+        };
+
+        NonConformityDetail NewNonConformityDetail = new NonConformityDetail
+        {
+            ReportedAt = nonConformityDto.ReportedAt,
+            ReportedBy = nonConformityDto.ReportedBy,
+            Description = nonConformityDto.Description,
+            Status = nonConformityDto.Status.ToLower()
+        };
+
+        NewNonConformityMaster.NonConformityDetails.Add(NewNonConformityDetail);
+        await commandDataContext.AddNonConformityAsync(NewNonConformityMaster);
+        await commandDataContext.AddNonConformityDetailAsync(NewNonConformityDetail, NewNonConformityMaster.Id);
+    }
+
+    public async Task SaveChangesAsync() => await commandDataContext.SaveChangesAsync();
+
+    public Task UpdateStatusNonConformityMasterAsync(Guid entityId, string status)
+    {
+        NonConformityReadModel NonConformityMaster = queryDataContext.NonConformities
+            .FirstOrDefault(nonConformity =>
+                nonConformity.Id == entityId);
+
+        NonConformityMaster.Status = status.ToLower();
+        commandDataContext.UpdateNonConformityAsync(NonConformityMaster);
+        return Task.CompletedTask;
+    }
+}
+```
+### CommandNonConformityDetailRepository
+```csharp
+internal class CommandNonConformityDetailRepository(
+    IWritableNonConformityDataContext dataContext) : ICommandNonConformityDetailRepository
+{
+
+    public async Task RegisterNonConformityDetailAsync(NonConformityCreateDetailDto nonConformityDetail)
+    {
+
+        NonConformityDetail NewDetail = new NonConformityDetail
+        {
+            ReportedBy = nonConformityDetail.ReportedBy,
+            Description = nonConformityDetail.Description,
+            Status = nonConformityDetail.Status.ToLower(),
+            ReportedAt = nonConformityDetail.ReportedAt
+        };
+
+        await dataContext.AddNonConformityDetailAsync(NewDetail, nonConformityDetail.EntityId);
+    }
+    public async Task SaveChangesAsync() => await dataContext.SaveChangesAsync();
+}
+```
+
+
+### QueryableNonConformityRepository
+```csharp
+internal class QueryableNonConformityRepository(
+    IQueryableNonConformityDataContext dataContext) : IQueryableNonConformityRepository
+{
+    public async Task<IEnumerable<NonConformityMaterResponse>> GetAllNonConformitiesAsync(string id, DateTime? from, DateTime? end)
+    {
+        var Query = dataContext.NonConformities
+            .Where(NonConformity =>
+                NonConformity.CompanyId == id &&
+                NonConformity.ReportedAt >= from &&
+                NonConformity.ReportedAt <= end)
+            .OrderBy(NonConformity => NonConformity.ReportedAt);
+
+        var NonConformities = await dataContext.ToListAsync(Query);
+
+        return NonConformities.Select(
+            NonConformity => new NonConformityMaterResponse(
+                NonConformity.Id,
+                NonConformity.EntityId,
+                NonConformity.ReportedAt,
+                NonConformity.AffectedProcess,
+                NonConformity.Cause,
+                NonConformity.Status,
+                dataContext.NonConformityDetails.Count(NonConformityDetail =>
+                    NonConformityDetail.NonConformityId == NonConformity.Id)));
+    }
+
+    public async Task<IEnumerable<NonConformityMaterResponse>> GetNonConformityByAffectedProcesssAsync(string id, string affectedProcess,
+        DateTime? from, DateTime? end)
+    {
+        var Query = dataContext.NonConformities
+            .Where(NonConformity =>
+                NonConformity.CompanyId == id &&
+                NonConformity.AffectedProcess == affectedProcess &&
+                NonConformity.ReportedAt >= from &&
+                NonConformity.ReportedAt <= end)
+            .OrderBy(NonConformity => NonConformity.ReportedAt);
+
+        var NonConformities = await dataContext.ToListAsync(Query);
+
+        return NonConformities.Select(
+            NonConformity => new NonConformityMaterResponse(
+                NonConformity.Id,
+                NonConformity.EntityId,
+                NonConformity.ReportedAt,
+                NonConformity.AffectedProcess,
+                NonConformity.Cause,
+                NonConformity.Status,
+                dataContext.NonConformityDetails.Count(NonConformityDetail =>
+                    NonConformityDetail.NonConformityId == NonConformity.Id)));
+    }
+
+    public async Task<IEnumerable<NonConformityResponse>> GetNonConformityByEntityIdAsync(string id, string entityId, DateTime? from, DateTime? end)
+    {
+        var NonConformities = await dataContext.ToListAsync(
+            dataContext.NonConformities
+                .Where(NonConformity => NonConformity.CompanyId == id && NonConformity.Id.ToString() == entityId)
+        );
+
+        var NonConformityDetails = await dataContext.ToListAsync(
+            dataContext.NonConformityDetails
+                .Where(d =>
+                    d.NonConformityId.ToString() == entityId &&
+                    d.ReportedAt >= from &&
+                    d.ReportedAt <= end)
+                );
+
+        return NonConformities
+            .Select(NonConformity => new NonConformityResponse(
+                NonConformity.ReportedAt,
+                NonConformity.AffectedProcess,
+                NonConformity.Status,
+                NonConformity.Cause,
+                NonConformityDetails
+                    .Where(Detail => Detail.NonConformityId == NonConformity.Id)
+                    .OrderBy(Detail => Detail.ReportedAt)
+                    .Select(Detail => new NonConformityDetailResponse(
+                        Detail.ReportedAt,
+                        Detail.ReportedBy,
+                        Detail.Description,
+                        Detail.Status))
+                    .ToList()
+            ))
+            .ToList();
+    }
+
+    public async Task<IEnumerable<NonConformityMaterResponse>> GetNonConformityByStatusAsync(string id, string status, DateTime? from, DateTime? end)
+    {
+        var Query = dataContext.NonConformities
+            .Where(NonConformity =>
+                NonConformity.CompanyId == id &&
+                NonConformity.Status == status &&
+                NonConformity.ReportedAt >= from &&
+                NonConformity.ReportedAt <= end)
+            .OrderBy(NonConformity => NonConformity.ReportedAt);
+
+        var NonConformities = await dataContext.ToListAsync(Query);
+
+        return NonConformities.Select(
+            NonConformity => new NonConformityMaterResponse(
+                NonConformity.Id,
+                NonConformity.EntityId,
+                NonConformity.ReportedAt,
+                NonConformity.AffectedProcess,
+                NonConformity.Cause,
+                NonConformity.Status,
+                dataContext.NonConformityDetails.Count(NonConformityDetail =>
+                    NonConformityDetail.NonConformityId == NonConformity.Id)));
+    }
+
+    public Task<bool> NonConformityExistsByGuidAsync(Guid entityId)
+    {
+        NonConformityReadModel NonConformityMaster = dataContext.NonConformities
+            .FirstOrDefault(nonConformity =>
+                nonConformity.Id == entityId);
+
+        bool Exists = NonConformityMaster != null;
+        return Task.FromResult(Exists);
+    }
+}
+```
 
 ## DataContext: Interfaces
 
@@ -102,8 +336,8 @@ Puedes implementar ambos contextos de datos utilizando un sistema de base de dat
 ```csharp
 internal class InMemoryNonConformityStore
 {
-    public List<NonConformity> NonConformities { get; } = new();
-    public List<NonConformityDetail> NonConformityDetails { get; } = new();
+    public List<Entities.NonConformity> NonConformities { get; } = new();
+    public List<Entities.NonConformityDetail> NonConformityDetails { get; } = new();
     public int NonConformityDetailsCurrentId { get; set; }
 
 }
@@ -115,7 +349,7 @@ internal class InMemoryNonConformityStore
 internal class InMemoryWritableNonConformityDataContext(
     InMemoryNonConformityStore dataContext) : IWritableNonConformityDataContext
 {
-    public Task AddNonConformityAsync(NonConformity nonConformityMaster)
+    public Task AddNonConformityAsync(Repositories.NonConformityRepositories.Entities.NonConformity nonConformityMaster)
     {
         var NonConformityRecord = new DataContexts.Entities.NonConformity
         {
@@ -132,7 +366,7 @@ internal class InMemoryWritableNonConformityDataContext(
         return Task.CompletedTask;
     }
 
-    public Task AddNonConformityDetailAsync(NonConformityDetail nonConformityDetail, Guid id)
+    public Task AddNonConformityDetailAsync(Repositories.NonConformityRepositories.Entities.NonConformityDetail nonConformityDetail, Guid id)
     {
         var NonConformity = dataContext.NonConformities
             .FirstOrDefault(nonConformity =>
@@ -228,7 +462,7 @@ Este endpoint permite registrar la entidad NonConformity junto a su primer detal
 ```csharp
 public static class EndpointsMapper
 {
-    public static IEndpointRouteBuilder MapRegisterNonConformityEndpoint(
+    public static IEndpointRouteBuilder MapNonConformityEndpoints(
         this IEndpointRouteBuilder builder)
     {
         builder.MapPost("".CreateEndpoint("NonConformityEndpoints"),
@@ -247,8 +481,6 @@ public static class EndpointsMapper
                 ));
             return TypedResults.Created();
         });
-
-        return builder;
     }
 }
 ```
@@ -280,56 +512,6 @@ public class NonConformityRequest
     public string AffectedProcess { get; set; }
     public string Cause { get; set; }
     public string Status { get; set; }
-}
-```
-## Repositorio: IRegisterNonConformityRepository
-
-```csharp
-public interface IRegisterNonConformityRepository
-{
-    Task RegisterNonConformityAsync(NonConformityDto nonConformityDto);
-    Task SaveChangesAsync();
-}
-```
-
-### Implementación del Repositorio.
-Al agregar un nuevo NonConformity, es creado junto a su primer detalle.
-```csharp
-internal class RegisterNonConformityRepository(
-    IWritableNonConformityDataContext writableNonConformityDataContext) : IRegisterNonConformityRepository
-{
-    async Task IRegisterNonConformityRepository.RegisterNonConformityAsync(NonConformityDto nonConformityDto)
-    {
-        NonConformity NewNonConformityMaster = new NonConformity
-        {
-            Id = Guid.NewGuid(),
-            ReportedAt = nonConformityDto.ReportedAt,
-            CompanyId = nonConformityDto.CompanyId,
-            EntityId = nonConformityDto.EntityId,
-            AffectedProcess = nonConformityDto.AffectedProcess,
-            Cause = nonConformityDto.Cause,
-            Status = nonConformityDto.Status,
-            NonConformityDetails = new List<NonConformityDetail>()
-        };
-
-        NonConformityDetail NewNonConformityDetail = new NonConformityDetail
-        {
-            ReportedAt = nonConformityDto.ReportedAt,
-            ReportedBy = nonConformityDto.ReportedBy,
-            Description = nonConformityDto.Description,
-            Status = nonConformityDto.Status
-        };
-
-        NewNonConformityMaster.NonConformityDetails.Add(NewNonConformityDetail);
-        await writableNonConformityDataContext.AddNonConformityAsync(NewNonConformityMaster);
-        await writableNonConformityDataContext.AddNonConformityDetailAsync(NewNonConformityDetail, NewNonConformityMaster.Id);
-    }
-
-    async Task IRegisterNonConformityRepository.SaveChangesAsync()
-    {
-        await writableNonConformityDataContext.SaveChangesAsync();
-    }
-
 }
 ```
 
@@ -397,19 +579,18 @@ Este endpoint permite obtener los registros de no conformidad desde un cliente H
 ```csharp
 public static class EndpointsMapper
 {
-    public static IEndpointRouteBuilder MapGetAllNonConformitiesEndpoint(
+    public static IEndpointRouteBuilder MapNonConformityEndpoints(
         this IEndpointRouteBuilder builder)
     {
-        builder.MapGet("{companyId}/".CreateEndpoint("NonConformityEndpoints"), async (
-            string companyId,
-            [FromQuery] DateTime? from,
-            [FromQuery] DateTime? end,
-            IGetAllNonConformitiesInputPort inputPort) =>
-        {
-            var result = await inputPort.HandleAsync(companyId, from, end);
-            return TypedResults.Ok(result);
-        });
-        return builder;
+            builder.MapGet("{companyId}/".CreateEndpoint("NonConformityEndpoints"), async (
+                string companyId,
+                [FromQuery] DateTime? from,
+                [FromQuery] DateTime? end,
+                IGetAllNonConformitiesInputPort inputPort) =>
+            {
+                var result = await inputPort.HandleAsync(companyId, from, end);
+                return TypedResults.Ok(result);
+            });
     }
 }
 ```
@@ -426,46 +607,6 @@ public class NonConformityMaterResponse(Guid id, string entityId, DateTime repor
     public string Cause => cause;
     public string Status => status;
     public int DetailsCount => detailsCount;
-}
-```
-
-
-## Repositorio: IGetAllNonConformitiesRepository
-
-```csharp
-public interface IGetAllNonConformitiesRepository
-{
-    Task<IEnumerable<NonConformityMaterResponse>> GetAllNonConformitiesAsync(string id, DateTime? from, DateTime? end);
-}
-```
-
-### Implementación del Repositorio.
-```csharp
-internal class GetAllNonConformitiesRepository(
-    IQueryableNonConformityDataContext nonConformityDataContext) : IGetAllNonConformitiesRepository
-{
-    public async Task<IEnumerable<NonConformityMaterResponse>> GetAllNonConformitiesAsync(string id, DateTime? from, DateTime? end)
-    {
-        var Query = nonConformityDataContext.NonConformities
-            .Where(NonConformity =>
-                NonConformity.CompanyId == id &&
-                NonConformity.ReportedAt >= from &&
-                NonConformity.ReportedAt <= end)
-            .OrderBy(NonConformity => NonConformity.ReportedAt);
-
-        var NonConformities = await nonConformityDataContext.ToListAsync(Query);
-
-        return NonConformities.Select(
-            NonConformity => new NonConformityMaterResponse(
-                NonConformity.Id,
-                NonConformity.EntityId,
-                NonConformity.ReportedAt,
-                NonConformity.AffectedProcess,
-                NonConformity.Cause,
-                NonConformity.Status,
-                nonConformityDataContext.NonConformityDetails.Count(NonConformityDetail =>
-                    NonConformityDetail.NonConformityId == NonConformity.Id)));
-    }
 }
 ```
 
@@ -538,11 +679,10 @@ Este endpoint permite obtener los registros de no conformidad desde un cliente H
 ```csharp
 public static class EndpointsMapper
 {
-    public static IEndpointRouteBuilder MapGetNonConformityByAffectedProcessEndpoint(
+    public static IEndpointRouteBuilder MapNonConformityEndpoints(
         this IEndpointRouteBuilder builder)
     {
-
-        builder.MapGet(("{companyId}/" + GetNonConformityByAffectedProcessEndpoint.AffectedProcess + "/{affectedProcess}").CreateEndpoint("NonConformityEndpoints"), async (
+        builder.MapGet(("{companyId}/" + "AffectedProcess"+ "/{affectedProcess}").CreateEndpoint("NonConformityEndpoints"), async (
             string companyId,
             string affectedProcess,
             [FromQuery] DateTime? from,
@@ -551,12 +691,8 @@ public static class EndpointsMapper
         {
             var result = await inputPort.HandleAsync(companyId, affectedProcess, from, end);
             return TypedResults.Ok(result);
-
         });
-
-
-        return builder;
-    }
+}
 }
 ```
 ### Reponse: NonConformityMaterResponse
@@ -572,47 +708,6 @@ public class NonConformityMaterResponse(Guid id, string entityId, DateTime repor
     public string Cause => cause;
     public string Status => status;
     public int DetailsCount => detailsCount;
-}
-```
-
-
-## Repositorio: IGetNonConformityByAffectedProcessRepository
-
-```csharp
-public interface IGetNonConformityByAffectedProcessRepository
-{
-    Task<IEnumerable<NonConformityMaterResponse>> GetNonConformityByAffectedProcesssAsync(string id, string affectedProcess, DateTime? from, DateTime? end);
-}
-```
-
-### Implementación del Repositorio.
-```csharp
-internal class GetNonConformityByAffectedProcessRepository(IQueryableNonConformityDataContext nonConformityDataContext) : IGetNonConformityByAffectedProcessRepository
-{
-    public async Task<IEnumerable<NonConformityMaterResponse>> GetNonConformityByAffectedProcesssAsync(string id, string affectedProcess, 
-        DateTime? from, DateTime? end)
-    {
-        var Query = nonConformityDataContext.NonConformities
-            .Where(NonConformity =>
-                NonConformity.CompanyId == id &&
-                NonConformity.AffectedProcess == affectedProcess &&
-                NonConformity.ReportedAt >= from &&
-                NonConformity.ReportedAt <= end)
-            .OrderBy(NonConformity => NonConformity.ReportedAt);
-
-        var NonConformities = await nonConformityDataContext.ToListAsync(Query);
-
-        return NonConformities.Select(
-            NonConformity => new NonConformityMaterResponse(
-                NonConformity.Id,
-                NonConformity.EntityId,
-                NonConformity.ReportedAt,
-                NonConformity.AffectedProcess,
-                NonConformity.Cause,
-                NonConformity.Status,
-                nonConformityDataContext.NonConformityDetails.Count(NonConformityDetail =>
-                    NonConformityDetail.NonConformityId == NonConformity.Id)));
-    }
 }
 ```
 
@@ -686,22 +781,20 @@ Este endpoint permite obtener los registros de no conformidad desde un cliente H
 ```csharp
 public static class EndpointsMapper
 {
-    public static IEndpointRouteBuilder MapGetNonConformityByStatusEndpoint(
+    public static IEndpointRouteBuilder MapNonConformityEndpoints(
         this IEndpointRouteBuilder builder)
     {
-        builder.MapGet(("{companyId}/" + GetNonConformityByStatusEndpoint.Status + "/{status}").CreateEndpoint("NonConformityEndpoints"), async (
-            string companyId,
-            string status,
-            [FromQuery] DateTime? from,
-            [FromQuery] DateTime? end,
-            IGetNonConformityByStatusInputPort inputPort) =>
-        {
-            var result = await inputPort.HandleAsync(companyId, status, from, end);
-            return TypedResults.Ok(result);
+            builder.MapGet(("{companyId}/" + "Status" + "/{status}").CreateEndpoint("NonConformityEndpoints"), async (
+                string companyId,
+                string status,
+                [FromQuery] DateTime? from,
+                [FromQuery] DateTime? end,
+                IGetNonConformityByStatusInputPort inputPort) =>
+            {
+                var result = await inputPort.HandleAsync(companyId, status, from, end);
+                return TypedResults.Ok(result);
 
-        });
-
-        return builder;
+            });
     }
 }
 ```
@@ -718,48 +811,6 @@ public class NonConformityMaterResponse(Guid id, string entityId, DateTime repor
     public string Cause => cause;
     public string Status => status;
     public int DetailsCount => detailsCount;
-}
-```
-
-
-## Repositorio: IGetNonConformityByStatusRepository
-
-```csharp
-public interface IGetNonConformityByStatusRepository
-{
-    Task<IEnumerable<NonConformityMaterResponse>> GetNonConformityByStatusAsync(string id, string status, DateTime? from, DateTime? end);
-
-}
-```
-
-### Implementación del Repositorio.
-```csharp
-internal class GetNonConformityByStatusRepository(
-    IQueryableNonConformityDataContext nonConformityDataContext) : IGetNonConformityByStatusRepository
-{
-    public async Task<IEnumerable<NonConformityMaterResponse>> GetNonConformityByStatusAsync(string id, string status, DateTime? from, DateTime? end)
-    {
-        var Query = nonConformityDataContext.NonConformities
-            .Where(NonConformity =>
-                NonConformity.CompanyId == id &&
-                NonConformity.Status == status &&
-                NonConformity.ReportedAt >= from &&
-                NonConformity.ReportedAt <= end)
-            .OrderBy(NonConformity => NonConformity.ReportedAt);
-
-        var NonConformities = await nonConformityDataContext.ToListAsync(Query);
-
-        return NonConformities.Select(
-            NonConformity => new NonConformityMaterResponse(
-                NonConformity.Id,
-                NonConformity.EntityId,
-                NonConformity.ReportedAt,
-                NonConformity.AffectedProcess,
-                NonConformity.Cause,
-                NonConformity.Status,
-                nonConformityDataContext.NonConformityDetails.Count(NonConformityDetail =>
-                    NonConformityDetail.NonConformityId == NonConformity.Id)));
-    }
 }
 ```
 
@@ -835,10 +886,10 @@ Este endpoint permite obtener el registro de no conformidad y sus detalles desde
 ```csharp
 public static class EndpointsMapper
 {
-    public static IEndpointRouteBuilder MapGetNonConformityByEntityIdEndpoint(
+    public static IEndpointRouteBuilder MapNonConformityEndpoints(
         this IEndpointRouteBuilder builder)
     {
-        builder.MapGet(("{companyId}/" + GetNonConformityByEntityIdEndpoint.Entity + "/{entityId}").CreateEndpoint("NonConformityEndpoints"), async (
+        builder.MapGet(("{companyId}/" + "Entity" + "/{entityId}").CreateEndpoint("NonConformityEndpoints"), async (
             string companyId,
             string entityId,
             [FromQuery] DateTime? from,
@@ -849,7 +900,6 @@ public static class EndpointsMapper
             return TypedResults.Ok(result);
 
         });
-        return builder;
     }
 }
 ```
@@ -867,58 +917,6 @@ public class NonConformityResponse(DateTime repotedAt, string affectedProcess,
 
 }
 ```
-
-## Repositorio: IGetNonConformityByEntityIdRepository
-
-```csharp
-public interface IGetNonConformityByEntityIdRepository
-{
-    Task<IEnumerable<NonConformityResponse>> GetNonConformityByEntityIdAsync(string id, string entityId, DateTime? from, DateTime? end);
-}
-```
-
-### Implementación del Repositorio.
-```csharp
-internal class GetNonConformityByEntityIdRepository(
-    IQueryableNonConformityDataContext nonConformityDataContext) : IGetNonConformityByEntityIdRepository
-{
-    public async Task<IEnumerable<NonConformityResponse>> GetNonConformityByEntityIdAsync(string id, string entityId, DateTime? from, DateTime? end)
-    {
-        var NonConformities = await nonConformityDataContext.ToListAsync(
-            nonConformityDataContext.NonConformities
-                .Where(NonConformity => NonConformity.CompanyId == id && NonConformity.Id.ToString() == entityId)
-        );
-
-        var NonConformityDetails = await nonConformityDataContext.ToListAsync(
-            nonConformityDataContext.NonConformityDetails
-                .Where(d =>
-                    d.NonConformityId.ToString() == entityId &&
-                    d.ReportedAt >= from &&
-                    d.ReportedAt <= end)
-                );
-
-        return NonConformities
-            .Select(NonConformity => new NonConformityResponse(
-                NonConformity.ReportedAt,
-                NonConformity.AffectedProcess,
-                NonConformity.Status,
-                NonConformity.Cause,
-                NonConformityDetails
-                    .Where(Detail => Detail.NonConformityId == NonConformity.Id)
-                    .OrderBy(Detail => Detail.ReportedAt)
-                    .Select(Detail => new NonConformityDetailResponse(
-                        Detail.ReportedAt,
-                        Detail.ReportedBy,
-                        Detail.Description,
-                        Detail.Status))
-                    .ToList()
-            ))
-            .ToList();
-
-    }
-}
-```
-
 ## Caso de uso: IGetNonConformityByEntityIdInputPort
 
 ```csharp

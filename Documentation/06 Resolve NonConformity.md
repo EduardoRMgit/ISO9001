@@ -83,10 +83,10 @@ Este endpoint permite registrar la entidad NonConformityDetail desde un cliente 
 ```csharp
 public static class EndpointsMapper
 {
-    public static IEndpointRouteBuilder MapRegisterNonConformityDetailEndpoint(
+    public static IEndpointRouteBuilder MapNonConformityEndpoints(
         this IEndpointRouteBuilder builder)
     {
-        builder.MapPost(("{companyId}/" + RegisterNonConformityDetailEndpoint.Detail).CreateEndpoint("NonConformityEndpoints"),
+        builder.MapPost(("{companyId}/" + "Detail").CreateEndpoint("NonConformityEndpoints"),
             async (
                 string companyId,
                 NonConformityCreateDetailRequest nonConformity, IRegisterNonConformityDetailInputPort inputPort) =>
@@ -134,67 +134,6 @@ public class NonConformityCreateDetailRequest
 }
 ```
 
-## Repositorio: IRegisterNonConformityDetailRepository
-
-```csharp
-public interface IRegisterNonConformityDetailRepository
-{
-    Task RegisterNonConformityDetailAsync(NonConformityCreateDetailDto nonConformityDetail);
-    Task SaveChangesAsync();
-    Task UpdateStatusNonConformityMasterAsync(Guid entityId, string status);
-    Task<bool> NonConformityExistsByGuidAsync(Guid entityId);
-}
-```
-
-### Implementación del Repositorio.
-Es importante resaltar que las definiciones de las interfaces "IQueryableNonConformityDataContext" e "IWritableNonConformityDataContext" están definidas en la documentación "05 NonConformity.md".
-
-```csharp
-internal class RegisterNonConformityDetailRepository(
-    IQueryableNonConformityDataContext queryNonConformityDataContext,
-    IWritableNonConformityDataContext writableNonConformityDataContext): IRegisterNonConformityDetailRepository
-{
-
-    public Task<bool> NonConformityExistsByGuidAsync(Guid entityId)
-    {
-        NonConformityReadModel NonConformityMaster = queryNonConformityDataContext.NonConformities
-            .FirstOrDefault(nonConformity =>
-                nonConformity.Id == entityId);
-
-        bool Exists = NonConformityMaster != null;
-        return Task.FromResult(Exists);
-    }
-
-    public async Task RegisterNonConformityDetailAsync(NonConformityCreateDetailDto nonConformityDetail)
-    {
-
-        NonConformityDetail NewDetail = new NonConformityDetail
-        {
-            ReportedBy = nonConformityDetail.ReportedBy,
-            Description = nonConformityDetail.Description,
-            Status = nonConformityDetail.Status,
-            ReportedAt = nonConformityDetail.ReportedAt
-        };
-
-        await writableNonConformityDataContext.AddNonConformityDetailAsync(NewDetail, nonConformityDetail.EntityId);
-    }
-
-
-    public Task UpdateStatusNonConformityMasterAsync(Guid entityId, string status)
-    {
-        NonConformityReadModel NonConformityMaster = queryNonConformityDataContext.NonConformities
-            .FirstOrDefault(nonConformity =>
-                nonConformity.Id == entityId);
-
-        NonConformityMaster.Status = status;
-        writableNonConformityDataContext.UpdateNonConformityAsync(NonConformityMaster);
-        return Task.CompletedTask;
-    }
-
-    public Task SaveChangesAsync() => writableNonConformityDataContext.SaveChangesAsync();
-}
-```
-
 ## Caso de uso: IRegisterNonConformityDetailInputPort
 
 ```csharp
@@ -207,22 +146,27 @@ public interface IRegisterNonConformityDetailInputPort
 ### Implementación del Caso de uso.
 Dentro del caso de uso, primero se válida si existe un NonConformity con el Id ingresada. En caso de que no exista se lanzará  una exepción, de lo contrario, se registrará el detalle en el sistema. Así mismo, se actualizará el estado del NonConformity maestro con el status del detalle ingresado y finalmente se guardán los cambios en el sistema.
 
+Es importante resaltar que las definiciones de las interfaces "ICommandNonConformityDetailRepository", "ICommandNonConformityRepository" y "ICommandNonConformityRepository" al igual que sus implementaciones están definidas en la documentación "05 NonConformity.md".
+
+
 ```csharp
-internal class RegisterNonConformityDetailHandler
-    (IRegisterNonConformityDetailRepository repository) : IRegisterNonConformityDetailInputPort
+internal class RegisterNonConformityDetailHandler(
+    ICommandNonConformityDetailRepository commandDetailRepository,
+    ICommandNonConformityRepository commandMasterRepository,
+    IQueryableNonConformityRepository queryRepository) : IRegisterNonConformityDetailInputPort
 {
     public async Task HandleAsync(NonConformityCreateDetailDto nonConformityDetail)
     {
-        bool NonConformityExists = await repository.NonConformityExistsByGuidAsync(nonConformityDetail.EntityId);
+        bool NonConformityExists = await queryRepository.NonConformityExistsByGuidAsync(nonConformityDetail.EntityId);
         if (!NonConformityExists)
         {
             throw new InvalidOperationException("NonConformity doesn't exist");
         }
         else
         {
-            await repository.RegisterNonConformityDetailAsync(nonConformityDetail);
-            await repository.UpdateStatusNonConformityMasterAsync(nonConformityDetail.EntityId, nonConformityDetail.Status);
-            await repository.SaveChangesAsync();
+            await commandDetailRepository.RegisterNonConformityDetailAsync(nonConformityDetail);
+            await commandMasterRepository.UpdateStatusNonConformityMasterAsync(nonConformityDetail.EntityId, nonConformityDetail.Status);
+            await commandDetailRepository.SaveChangesAsync();
         }
 
     }

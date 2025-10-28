@@ -21,7 +21,7 @@ Este endpoint permite obtener el dashboard de calidad desde un cliente HTTP.
 ```csharp
 public static class EndpointsMapper
 {
-    public static IEndpointRouteBuilder MapGetQualityDashBoard(
+    public static IEndpointRouteBuilder MapQualityDashboardEndpoints(
         this IEndpointRouteBuilder builder)
     {
         builder.MapGet("{companyId}/dashboard/".CreateEndpoint("DashBoardEndpoints"), async (
@@ -81,9 +81,9 @@ public class MonthlyQualityKpi(
 ## Repositorio: IGetQualityDashBoardRepository
 
 ```csharp
-public interface IGetQualityDashBoardRepository
+public interface IQueryableQualityDashboardRepository
 {
-    Task<int> GetNonConformitiesCountByStatus(string companyId, string status,DateTime? from, DateTime? end);
+    Task<int> GetNonConformitiesCountByStatus(string companyId, string status, DateTime? from, DateTime? end);
     Task<int> GetOpenNonConformitiesCount(string companyId, string closedStatus, DateTime? from, DateTime? end);
     Task<TimeSpan> GetAverageResolutionDays(string companyId, DateTime? from, DateTime? end);
     Task<int> GetTotalCustomerFeedbacks(string companyId, DateTime? from, DateTime? end);
@@ -91,18 +91,17 @@ public interface IGetQualityDashBoardRepository
     Task<int> GetTotalIncidentReports(string companyId, DateTime? from, DateTime? end);
     Task<Dictionary<string, int>> GetIncidentReportsByEntityId(string companyId, DateTime? from, DateTime? end);
     Task<List<MonthlyQualityKpi>> GetMonthlyQualityKpis(string companyId, DateTime? from, DateTime? end);
-
 }
 ```
 
 ### Implementación del Repositorio.
 En la implementación del repositorio, se inyectan los contextos de datos necesarios, o en su defecto, las abstracciones de los repositorios de otros casos de uso.
 ```csharp
-internal class GetQualityDashBoardRepository(
-    IGetAllCustomerFeedbackRepository getAllCustomerFeedbackRepository,
-    IGetAllIncidentReportsRepository getAllIncidentReportRepository,
-    IGetAllNonConformitiesRepository getAllNonConformitiesRepository,
-    IQueryableNonConformityDataContext nonConformityDataContext) : IGetQualityDashBoardRepository
+internal class QueryableQualityDashboardRepository(
+    IQueryableCustomerFeedbackRepository getAllCustomerFeedbackRepository,
+    IQueryableIncidentReportRepository getAllIncidentReportRepository,
+    IQueryableNonConformityRepository getAllNonConformitiesRepository,
+    IQueryableNonConformityDataContext nonConformityDataContext) : IQueryableQualityDashboardRepository
 {
 
     public async Task<TimeSpan> GetAverageResolutionDays(string companyId, DateTime? from, DateTime? end)
@@ -113,7 +112,8 @@ internal class GetQualityDashBoardRepository(
             .ToList();
 
         var NonConformityDetails = nonConformityDataContext.NonConformityDetails
-            .Where(Detail => NonConformityIds.Contains(Detail.NonConformityId))
+            .Where(Detail => NonConformityIds.Contains(Detail.NonConformityId) &&
+                Detail.ReportedAt >= from && Detail.ReportedAt <= end)
             .GroupBy(Detail => Detail.NonConformityId)
             .ToList();
 
@@ -223,9 +223,11 @@ internal class GetQualityDashBoardRepository(
             .Concat(FeedbacksMonthlyKpi)
             .GroupBy(MonthlyItem => new { MonthlyItem.Year, MonthlyItem.Month })
             .Select(Group => new MonthlyQualityKpi(
-                Group.Key.Year.ToString(), Group.Key.Month.ToString(),
+                Group.Key.Year.ToString(), Group.Key.Month.ToString("D2"),
                 Group.Sum(MonthlyItem => MonthlyItem.NC), Group.Sum(MonthlyItem => MonthlyItem.FB)
-                ));
+                ))
+                .OrderByDescending(kpi => int.Parse(kpi.Year))
+                .ThenByDescending(kpi => int.Parse(kpi.Month)); ;
 
         return MonthlyKpis.ToList();
     }
@@ -246,7 +248,7 @@ public interface IGetQualityDashBoardInputPort
 
 ```csharp
 internal class GetQualityDashBoardHandler(
-    IGetQualityDashBoardRepository repository) : IGetQualityDashBoardInputPort
+    IQueryableQualityDashboardRepository repository) : IGetQualityDashBoardInputPort
 {
     private const string NonConformityStatusClosed = "closed";
 

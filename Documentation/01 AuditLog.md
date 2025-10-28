@@ -27,10 +27,167 @@ public class AuditLog
     public string Data { get; set; }
 }
 ```
+## Repository: Interfaces
+En esta sección se definen las interfaces que se utilizarán en los repositorios de los casos de uso de la entidad AuditLog. Siguiendo el patrón CQRS, se separan las operaciones de lectura y escritura en dos interfaces diferentes.
+
+### ICommandAuditLogRepository
+La interfaz ICommandAuditLogRepository se encarga únicamente de agregar y guardar registros AuditLog.
+
+```csharp
+public interface ICommandAuditLogRepository
+{
+    Task RegisterAuditLogAsync(AuditLogDto auditLog);
+    Task SaveChangesAsync();
+}
+```
+
+### IQueryableAuditLogRepository
+La interfaz IQueryableAuditLogRepository está dedicada a las operaciones de consulta.
+
+```csharp
+public interface IQueryableAuditLogRepository
+{
+    Task<IEnumerable<AuditLogResponse>> GetAllAuditLogsOrderedByIdAscendingAsync(string id, DateTime? from, DateTime? end);
+
+    Task<AuditLogResponse> GetAuditLogByIdAsync(string companyId, int id);
+
+    Task<bool> AuditLogExitsByIdAsync(string companyId, int id);
+
+    Task<IEnumerable<AuditLogResponse>> GetAuditLogsByActionAsync(string id, string action, DateTime? from, DateTime? end);
+
+    Task<IEnumerable<AuditLogResponse>> GetAuditLogsByEntityIdAsync(string id, string entityId, DateTime? from, DateTime? end);
+}
+```
+
+## Implementación de los repositorios.
+
+### CommandAuditLogRepository
+```csharp
+internal class CommandAuditLogRepository(
+    IWritableAuditLogDataContext dataContext) : ICommandAuditLogRepository
+{
+    public async Task RegisterAuditLogAsync(AuditLogDto auditLogDto)
+    {
+
+        var NewAuditiLog = new Entities.AuditLog
+        {
+            EntityId = auditLogDto.EntityId,
+            CompanyId = auditLogDto.CompanyId,
+            Action = auditLogDto.Action,
+            PerformedBy = auditLogDto.PerformedBy,
+            Timestamp = auditLogDto.Timestamp,
+            Details = auditLogDto.Details,
+            Data = auditLogDto.Data,
+        };
+
+        await dataContext.AddAsync(NewAuditiLog);
+
+    }
+
+    public async Task SaveChangesAsync() => await dataContext.SaveChangesAsync();
+
+}
+```
+
+### QueryableAuditLogRepository
+```csharp
+internal class QueryableAuditLogRepository(IQueryableAuditLogDataContext dataContext) : IQueryableAuditLogRepository
+{
+    public async Task<IEnumerable<AuditLogResponse>> GetAuditLogsByEntityIdAsync(string id, string entityId,
+    DateTime? from, DateTime? end)
+    {
+        IQueryable<AuditLogReadModel> Query = dataContext.AuditLogs
+            .Where(AuditLog => AuditLog.CompanyId == id &&
+                        AuditLog.EntityId == entityId &&
+                        AuditLog.Timestamp >= from &&
+                        AuditLog.Timestamp <= end);
+
+        var AuditLogs = await dataContext.ToListAsync(Query);
+
+        return AuditLogs.Select(AuditLog => new AuditLogResponse(
+            AuditLog.LogId,
+            AuditLog.EntityId,
+            AuditLog.Action,
+            AuditLog.PerformedBy,
+            AuditLog.Timestamp,
+            AuditLog.CreatedAt,
+            AuditLog.Details));
+    }
+
+    public async Task<IEnumerable<AuditLogResponse>> GetAuditLogsByActionAsync(string id, string action,
+    DateTime? from, DateTime? end)
+    {
+        IQueryable<AuditLogReadModel> Query = dataContext.AuditLogs
+            .Where(AuditLog => AuditLog.CompanyId == id &&
+                            AuditLog.Action == action &&
+                            AuditLog.Timestamp >= from &&
+                            AuditLog.Timestamp <= end);
+
+        var AuditLogs = await dataContext.ToListAsync(Query);
+
+        return AuditLogs.Select(AuditLog => new AuditLogResponse(
+            AuditLog.LogId,
+            AuditLog.EntityId,
+            AuditLog.Action,
+            AuditLog.PerformedBy,
+            AuditLog.Timestamp,
+            AuditLog.CreatedAt,
+            AuditLog.Details));
+    }
+
+    public Task<bool> AuditLogExitsByIdAsync(string companyId, int id)
+    {
+        var AuditLog = dataContext.AuditLogs.FirstOrDefault
+            (AuditLog => AuditLog.CompanyId == companyId &&
+                AuditLog.LogId == id);
+
+        return Task.FromResult(AuditLog != null);
+    }
+
+    public Task<AuditLogResponse> GetAuditLogByIdAsync(string companyId, int id)
+    {
+        var AuditLog = dataContext
+            .AuditLogs.FirstOrDefault(
+            AuditLog => AuditLog.CompanyId == companyId &&
+                AuditLog.LogId == id);
+
+        return Task.FromResult(new AuditLogResponse(
+            AuditLog.LogId,
+            AuditLog.EntityId,
+            AuditLog.Action,
+            AuditLog.PerformedBy,
+            AuditLog.Timestamp,
+            AuditLog.CreatedAt,
+            AuditLog.Details));
+    }
+
+    public async Task<IEnumerable<AuditLogResponse>> GetAllAuditLogsOrderedByIdAscendingAsync(
+    string id, DateTime? from, DateTime? end)
+    {
+        IQueryable<AuditLogReadModel> Query = dataContext.AuditLogs
+            .Where(AuditLog => AuditLog.CompanyId == id &&
+                            AuditLog.Timestamp >= from &&
+                            AuditLog.Timestamp <= end)
+            .OrderBy(AuditLog => AuditLog.LogId);
+
+        var AuditLogs = await dataContext.ToListAsync(Query);
+
+        return AuditLogs.Select(AuditLog => new AuditLogResponse(
+            AuditLog.LogId,
+            AuditLog.EntityId,
+            AuditLog.Action,
+            AuditLog.PerformedBy,
+            AuditLog.Timestamp,
+            AuditLog.CreatedAt,
+            AuditLog.Details));
+    }
+}
+```
+
 
 ## DataContext: Interfaces
 
-En esta sección se definirán las interfaces que se utilizarán en los repositorios de los diferentes casos de usos de la entidad AuditLog. Siguiendo el patrón CQRS, se separaron las operaciones de lectura y escritura en dos interfaces diferentes.
+En esta sección se definirán las interfaces que se utilizarán en los datacontext de los diferentes casos de uso de la entidad AuditLog. Siguiendo el patrón CQRS, se separaron las operaciones de lectura y escritura en dos interfaces diferentes.
 
 ### IWritableAuditLogDataContext
 
@@ -39,7 +196,7 @@ La interfaz IWritableAuditLogDataContext se encarga exclusivamente de agregar y 
 ```csharp
 public interface IWritableAuditLogDataContext
 {
-    Task AddAsync(AuditLog auditLog);
+    Task AddAsync(Entities.AuditLog auditLog);
     Task SaveChangesAsync();
 }
 ```
@@ -65,7 +222,7 @@ Puedes implementar ambos contextos de datos utilizando un sistema de base de dat
 ```csharp
 internal class InMemoryAuditLogStore
 {
-    public List<AuditLog> AuditLogs { get; } = new ();
+    public List<Entities.AuditLog> AuditLogs { get; } = new();
     public int CurrentId { get; set; }
 }
 ```
@@ -77,7 +234,7 @@ internal class InMemoryAuditLogStore
 internal class InMemoryWritableAuditLogDataContext(
     InMemoryAuditLogStore dataContext) : IWritableAuditLogDataContext
 {
-    public Task AddAsync(AuditLog auditLog)
+    public Task AddAsync(Repositories.AuditLogRepositories.Entities.AuditLog auditLog)
     {
         var Record = new DataContexts.Entities.AuditLog
         {
@@ -139,10 +296,10 @@ Este endpoint permite registrar logs desde un cliente HTTP.
 ```csharp
 public static class EndpointsMapper
 {
-    public static IEndpointRouteBuilder MapRegisterAuditLogEndpoint(
+    public static IEndpointRouteBuilder MapAuditLogEndpoints(
         this IEndpointRouteBuilder builder)
     {
-        builder.MapPost("api/auditlog",
+        builder.MapPost("".CreateEndpoint("AuditLogEndpoints"),
             async (AuditLogRequest auditLog, IRegisterAuditLogInputPort inputPort) =>
             {
                 await inputPort.HandleAsync(new AuditLogDto(
@@ -153,12 +310,9 @@ public static class EndpointsMapper
                     auditLog.Timestamp,
                     auditLog.Details,
                     auditLog.Data)
-                );
-
+                    );
                 return TypedResults.Created();
             });
-
-        return builder;
     }
 }
 ```
@@ -190,45 +344,6 @@ public class AuditLogRequest
     public string Data { get; set; }
 }
 ```
-## Repositorio: IRegisterAuditLogRepository
-
-```csharp
-public interface IRegisterAuditLogRepository
-{
-    Task RegisterAuditLogAsync(AuditLogDto auditLog);
-    Task SaveChangesAsync();
-}
-```
-
-### Implementación del Repositorio.
-
-```csharp
-internal class RegisterAuditLogRepository(
-    IWritableAuditLogDataContext dataContext) : IRegisterAuditLogRepository
-{
-    public async Task RegisterAuditLogAsync(AuditLogDto auditLogDto)
-    {
-
-        var NewAuditiLog = new AuditLog
-        {
-            EntityId = auditLogDto.EntityId,
-            CompanyId = auditLogDto.CompanyId,
-            Action = auditLogDto.Action,
-            PerformedBy = auditLogDto.PerformedBy,
-            Timestamp = auditLogDto.Timestamp,
-            Details = auditLogDto.Details,
-            Data = auditLogDto.Data,
-        };
-
-        await dataContext.AddAsync(NewAuditiLog);
-
-    }
-
-    public async Task SaveChangesAsync() => await dataContext.SaveChangesAsync();
-
-}
-```
-
 ## Caso de uso: IRegisterAuditLogInputPort
 
 ```csharp
@@ -296,21 +411,19 @@ Este endpoint permite obtener los logs desde un cliente HTTP.
 ```csharp
 public static class EndpointsMapper
 {
-    public static IEndpointRouteBuilder MapGetAllAuditLogsEndpoint(
+    public static IEndpointRouteBuilder MapAuditLogEndpoints(
         this IEndpointRouteBuilder builder)
     {
-        builder.MapGet("{companyId}/".CreateEndpoint("AuditLogEndpoints"), async (
+            builder.MapGet("{companyId}/".CreateEndpoint("AuditLogEndpoints"), async (
             string companyId,
             [FromQuery] DateTime? from,
             [FromQuery] DateTime? end,
             IGetAllAuditLogsInputPort inputPort) =>
-        {
-            var result = await inputPort.HandleAsync(companyId, from, end);
-            return TypedResults.Ok(result);
+            {
+                var result = await inputPort.HandleAsync(companyId, from, end);
+                return TypedResults.Ok(result);
 
-        });
-
-        return builder;
+            });
     }
 }
 ```
@@ -329,44 +442,6 @@ public class AuditLogResponse(int logId, string entityId, string action,
     public string Details => details;
 }
 ```
-
-
-## Repositorio: IGetAllAuditLogsRepository
-
-```csharp
-public interface IGetAllAuditLogsRepository
-{
-    Task<IEnumerable<AuditLogResponse>> GetAllAuditLogsOrderedByIdAscendingAsync(string id, DateTime? from, DateTime? end);
-}
-```
-
-### Implementación del Repositorio.
-```csharp
-internal class GetAllAuditLogsRepository(IQueryableAuditLogDataContext dataContext) : IGetAllAuditLogsRepository
-{
-    public async Task<IEnumerable<AuditLogResponse>> GetAllAuditLogsOrderedByIdAscendingAsync(
-        string id, DateTime? from, DateTime? end)
-    {
-        IQueryable<AuditLogReadModel> Query = dataContext.AuditLogs
-            .Where(AuditLog => AuditLog.CompanyId == id &&
-                            AuditLog.Timestamp >= from &&
-                            AuditLog.Timestamp <= end)
-            .OrderBy(AuditLog => AuditLog.LogId);
-
-        var AuditLogs = await dataContext.ToListAsync(Query);
-
-        return AuditLogs.Select(AuditLog => new AuditLogResponse(
-            AuditLog.LogId,
-            AuditLog.EntityId,
-            AuditLog.Action,
-            AuditLog.PerformedBy,
-            AuditLog.Timestamp,
-            AuditLog.CreatedAt,
-            AuditLog.Details));
-    }
-}
-```
-
 ## Caso de uso: IGetAllAuditLogsInputPort
 
 ```csharp
@@ -440,22 +515,20 @@ Este endpoint permite obtener los logs desde un cliente HTTP.
 ```csharp
 public static class EndpointsMapper
 {
-    public static IEndpointRouteBuilder MapGetAuditLogByActionEndpoint(
+    public static IEndpointRouteBuilder MapAuditLogEndpoints(
         this IEndpointRouteBuilder builder)
     {
-        builder.MapGet(("{companyId}/" + GetAuditLogsByActionEndpoint.Action + "/{action}").CreateEndpoint("AuditLogEndpoints"), async (
+            builder.MapGet(("{companyId}/" + "Action" + "/{action}").CreateEndpoint("AuditLogEndpoints"), async (
             string companyId,
             string action,
             [FromQuery] DateTime? from,
             [FromQuery] DateTime? end,
             IGetAuditLogsByActionInputPort inputPort) =>
-        {
-            var result = await inputPort.HandleAsync(companyId, action, from, end);
-            return TypedResults.Ok(result);
+            {
+                var result = await inputPort.HandleAsync(companyId, action, from, end);
+                return TypedResults.Ok(result);
 
-        });
-
-        return builder;
+            });
     }
 }
 ```
@@ -474,45 +547,6 @@ public class AuditLogResponse(int logId, string entityId, string action,
     public string Details => details;
 }
 ```
-
-
-## Repositorio: IGetAuditLogsByActionRepository
-
-```csharp
-public interface IGetAuditLogsByActionRepository
-{
-    Task<IEnumerable<AuditLogResponse>> GetAuditLogsByActionAsync(string id, string action, DateTime? from, DateTime? end);
-}
-```
-
-### Implementación del Repositorio.
-```csharp
-internal class GetAuditLogsByActionRepository(
-    IQueryableAuditLogDataContext dataContext) : IGetAuditLogsByActionRepository
-{
-    public async Task<IEnumerable<AuditLogResponse>> GetAuditLogsByActionAsync(string id, string action,
-        DateTime? from, DateTime? end)
-    {
-        IQueryable<AuditLogReadModel> Query = dataContext.AuditLogs
-            .Where(AuditLog => AuditLog.CompanyId == id &&
-                            AuditLog.Action == action &&
-                            AuditLog.Timestamp >= from &&
-                            AuditLog.Timestamp <= end);
-
-        var AuditLogs = await dataContext.ToListAsync(Query);
-
-        return AuditLogs.Select(AuditLog => new AuditLogResponse(
-            AuditLog.LogId,
-            AuditLog.EntityId,
-            AuditLog.Action,
-            AuditLog.PerformedBy,
-            AuditLog.Timestamp,
-            AuditLog.CreatedAt,
-            AuditLog.Details));
-    }
-}
-```
-
 ## Caso de uso: IGetAuditLogsByActionInputPort
 
 ```csharp
@@ -586,21 +620,20 @@ Este endpoint permite obtener los logs desde un cliente HTTP.
 ```csharp
 public static class EndpointsMapper
 {
-    public static IEndpointRouteBuilder MapGetAuditLogsByEntityIdEndpoint(
+    public static IEndpointRouteBuilder MapAuditLogEndpoints(
         this IEndpointRouteBuilder builder)
     {
-        builder.MapGet(("{companyId}/" + GetAuditLogsByEntityIdEndpoint.Entity + "/{entityId}").CreateEndpoint("AuditLogEndpoints"), async (
-            string companyId,
-            string entityId,
-            [FromQuery] DateTime? from,
-            [FromQuery] DateTime? end,
-            IGetAuditLogsByEntityIdInputPort inputPort) =>
+        builder.MapGet(("{companyId}/" + "Entity" + "/{entityId}").CreateEndpoint("AuditLogEndpoints"), async (
+        string companyId,
+        string entityId,
+        [FromQuery] DateTime? from,
+        [FromQuery] DateTime? end,
+        IGetAuditLogsByEntityIdInputPort inputPort) =>
         {
             var result = await inputPort.HandleAsync(companyId, entityId, from, end);
             return TypedResults.Ok(result);
 
         });
-        return builder;
     }
 }
 ```
@@ -619,44 +652,6 @@ public class AuditLogResponse(int logId, string entityId, string action,
     public string Details => details;
 }
 ```
-
-## Repositorio: GetAuditLogsByEntityIdRepository
-
-```csharp
-public interface IGetAuditLogsByEntityIdRepository
-{
-    Task<IEnumerable<AuditLogResponse>> GetAuditLogsByEntityIdAsync(string id, string entityId, DateTime? from, DateTime? end);
-}
-```
-
-### Implementación del Repositorio.
-```csharp
-internal class GetAuditLogsByEntityIdRepository(
-    IQueryableAuditLogDataContext dataContext) : IGetAuditLogsByEntityIdRepository
-{
-    public async Task<IEnumerable<AuditLogResponse>> GetAuditLogsByEntityIdAsync(string id, string entityId,
-        DateTime? from, DateTime? end)
-    {
-        IQueryable<AuditLogReadModel> Query = dataContext.AuditLogs
-            .Where(AuditLog => AuditLog.CompanyId == id &&
-                        AuditLog.EntityId == entityId &&
-                        AuditLog.Timestamp >= from &&
-                        AuditLog.Timestamp <= end);
-
-        var AuditLogs = await dataContext.ToListAsync(Query);
-
-        return AuditLogs.Select(AuditLog => new AuditLogResponse(
-            AuditLog.LogId,
-            AuditLog.EntityId,
-            AuditLog.Action,
-            AuditLog.PerformedBy,
-            AuditLog.Timestamp,
-            AuditLog.CreatedAt,
-            AuditLog.Details));
-    }
-}
-```
-
 ## Caso de uso: IGetAuditLogsByEntityIdInputPort
 
 ```csharp
